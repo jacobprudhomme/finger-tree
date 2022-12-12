@@ -178,4 +178,28 @@ object FingerTree {
           deepR(prefix, spine, tailR(suffix))
         )
     }
+
+  def headL[T](tree: FingerTree[T]): T =
+    viewL(tree) match {
+      case View.Cons(value, _) => value
+      case _                   => throw Exception("Partial function case reached")
+    }
+
+  def headR[T](tree: FingerTree[T]): T =
+    viewR(tree) match {
+      case View.Cons(value, _) => value
+      case _                   => throw Exception("Partial function case reached")
+    }
+
+  def tailL[T](tree: FingerTree[T]): FingerTree[T] =
+    viewL(tree) match {
+      case View.Cons(_, rest) => rest
+      case _                  => throw Exception("Partial function case reached")
+    }
+
+  def tailR[T](tree: FingerTree[T]): FingerTree[T] =
+    viewR(tree) match {
+      case View.Cons(_, rest) => rest
+      case _                  => throw Exception("Partial function case reached")
+    }
 }
