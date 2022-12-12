@@ -202,4 +202,10 @@ object FingerTree {
       case View.Cons(_, rest) => rest
       case _                  => throw Exception("Partial function case reached")
     }
+
+  def isEmpty[T](tree: FingerTree[T]): Boolean =
+    viewL(tree) match {
+      case View.Nil        => true
+      case View.Cons(_, _) => false
+    }
 }
