@@ -6,6 +6,5 @@ lazy val root = project
   .settings(
     name := "finger-tree",
     version := "0.1.0",
-
     scalaVersion := scala3Version
   )
