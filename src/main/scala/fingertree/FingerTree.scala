@@ -1,31 +1,32 @@
 package fingertree
 
-// import stainless.lang._
 import stainless.collection.{List, Cons, Nil}
+import stainless.lang.{Option, Some, None}
 
-private enum Node[+T]:
-  case Node2(a: T, b: T)
-  case Node3(a: T, b: T, c: T)
+private sealed trait Node[T]
+private final case class Node2[T](a: T, b: T) extends Node[T]
+private final case class Node3[T](a: T, b: T, c: T) extends Node[T]
 
-private enum Digit[+T]:
-  case Digit1(a: T)
-  case Digit2(a: T, b: T)
-  case Digit3(a: T, b: T, c: T)
-  case Digit4(a: T, b: T, c: T, d: T)
+private sealed trait Digit[T]
+private final case class Digit1[T](a: T) extends Digit[T]
+private final case class Digit2[T](a: T, b: T) extends Digit[T]
+private final case class Digit3[T](a: T, b: T, c: T) extends Digit[T]
+private final case class Digit4[T](a: T, b: T, c: T, d: T) extends Digit[T]
 
-enum FingerTree[+T]:
-  case Empty
-  case Single(value: T)
-  case Deep(prefix: Digit[T], spine: FingerTree[Node[T]], suffix: Digit[T])
+sealed trait FingerTree[T]
+final case class Empty[T]() extends FingerTree[T]
+final case class Single[T](value: T) extends FingerTree[T]
+final case class Deep[T](
+  prefix: Digit[T],
+  spine: FingerTree[Node[T]],
+  suffix: Digit[T]
+) extends FingerTree[T]
 
-enum View[+T]:
-  case Nil
-  case Cons(value: T, rest: FingerTree[T])
+sealed trait View[T]
+final case class NilV[T]() extends View[T]
+final case class ConsV[T](value: T, rest: FingerTree[T]) extends View[T]
 
 object FingerTree {
-  import Digit._
-  import Node._
-
   /// INTERNAL HELPERS ///
 
   private def headL[T](digit: Digit[T]): T =
@@ -77,9 +78,9 @@ object FingerTree {
   private def toTree[T](elems: Digit[T]): FingerTree[T] =
     elems match {
       case Digit1(a) => Single(a)
-      case Digit2(a, b) => Deep(Digit1(a), Empty, Digit1(b))
-      case Digit3(a, b, c) => Deep(Digit2(a, b), Empty, Digit1(c))
-      case Digit4(a, b, c, d) => Deep(Digit2(a, b), Empty, Digit2(c, d))
+      case Digit2(a, b) => Deep(Digit1(a), Empty(), Digit1(b))
+      case Digit3(a, b, c) => Deep(Digit2(a, b), Empty(), Digit1(c))
+      case Digit4(a, b, c, d) => Deep(Digit2(a, b), Empty(), Digit2(c, d))
     }
 
   private def deepL[T](prefixTail: List[T], spine: FingerTree[Node[T]], suffix: Digit[T]): FingerTree[T] =
@@ -89,8 +90,8 @@ object FingerTree {
       case Cons(a, _) => Deep(Digit1(a), spine, suffix)
       case Nil() =>
         viewL(spine) match {
-          case View.Cons(value, rest) => Deep(toDigit(value), rest, suffix)
-          case View.Nil => toTree(suffix)
+          case ConsV(value, rest) => Deep(toDigit(value), rest, suffix)
+          case NilV() => toTree(suffix)
         }
     }
 
@@ -101,8 +102,8 @@ object FingerTree {
       case Cons(a, _) => Deep(prefix, spine, Digit1(a))
       case Nil() =>
         viewR(spine) match {
-          case View.Cons(value, rest) => Deep(prefix, rest, toDigit(value))
-          case View.Nil => toTree(prefix)
+          case ConsV(value, rest) => Deep(prefix, rest, toDigit(value))
+          case NilV() => toTree(prefix)
         }
     }
 
@@ -120,11 +121,11 @@ object FingerTree {
 
   def addL[T](tree: FingerTree[T], value: T): FingerTree[T] =
     tree match {
-      case Empty => Single(value)
+      case Empty() => Single(value)
       case Single(existingValue) =>
         Deep(
           Digit1(value),
-          Empty,
+          Empty(),
           Digit1(existingValue)
         )
       case Deep(Digit1(a), spine, suffix) =>
@@ -155,11 +156,11 @@ object FingerTree {
 
   def addR[T](tree: FingerTree[T], value: T): FingerTree[T] =
     tree match {
-      case Empty => Single(value)
+      case Empty() => Single(value)
       case Single(existingValue) =>
         Deep(
           Digit1(existingValue),
-          Empty,
+          Empty(),
           Digit1(value)
         )
       case Deep(prefix, spine, Digit1(a)) =>
@@ -190,10 +191,10 @@ object FingerTree {
 
   def viewL[T](tree: FingerTree[T]): View[T] =
     tree match {
-      case Empty => View.Nil
-      case Single(value) => View.Cons(value, Empty)
+      case Empty() => NilV()
+      case Single(value) => ConsV(value, Empty())
       case Deep(prefix, spine, suffix) =>
-        View.Cons(
+        ConsV(
           headL(prefix),
           deepL(tailL(prefix), spine, suffix)
         )
@@ -201,43 +202,43 @@ object FingerTree {
 
   def viewR[T](tree: FingerTree[T]): View[T] =
     tree match {
-      case Empty => View.Nil
-      case Single(value) => View.Cons(value, Empty)
+      case Empty() => NilV()
+      case Single(value) => ConsV(value, Empty())
       case Deep(prefix, spine, suffix) =>
-        View.Cons(
+        ConsV(
           headR(suffix),
           deepR(prefix, spine, tailR(suffix))
         )
     }
 
-  def headL[T](tree: FingerTree[T]): T =
+  def headL[T](tree: FingerTree[T]): Option[T] =
     tree match {
-      case Empty => throw Exception("Empty tree")
-      case Single(e) => e
-      case Deep(prefix, _, _) => headL(prefix)
+      case Empty() => None()
+      case Single(e) => Some(e)
+      case Deep(prefix, _, _) => Some(headL(prefix))
     }
 
-  def headR[T](tree: FingerTree[T]): T =
+  def headR[T](tree: FingerTree[T]): Option[T] =
     tree match {
-      case Empty => throw Exception("Empty tree")
-      case Single(e) => e
-      case Deep(_, _, suffix) => headR(suffix)
+      case Empty() => None()
+      case Single(e) => Some(e)
+      case Deep(_, _, suffix) => Some(headR(suffix))
     }
 
-  def tailL[T](tree: FingerTree[T]): FingerTree[T] =
+  def tailL[T](tree: FingerTree[T]): Option[FingerTree[T]] =
     viewL(tree) match {
-      case View.Cons(_, rest) => rest
-      case View.Nil => throw Exception("Empty tree")
+      case ConsV(_, rest) => Some(rest)
+      case NilV() => None()
     }
 
-  def tailR[T](tree: FingerTree[T]): FingerTree[T] =
+  def tailR[T](tree: FingerTree[T]): Option[FingerTree[T]] =
     viewR(tree) match {
-      case View.Cons(_, rest) => rest
-      case View.Nil => throw Exception("Empty tree")
+      case ConsV(_, rest) => Some(rest)
+      case NilV() => None()
     }
 
   def isEmpty[T](tree: FingerTree[T]): Boolean =
-    tree == Empty
+    tree == Empty()
 
   /// 3.3 CONCATENATION ///
 
@@ -253,10 +254,10 @@ object FingerTree {
 
   private def concat[T](tree1: FingerTree[T], elems: List[T], tree2: FingerTree[T]): FingerTree[T] =
     tree1 match {
-      case Empty => tree2
+      case Empty() => tree2
       case Single(e) => addL(tree2, e)
       case Deep(prefix1, spine1, suffix1) => tree2 match {
-        case Empty => tree1
+        case Empty() => tree1
         case Single(e) => addR(tree1, e)
         case Deep(prefix2, spine2, suffix2) =>
           Deep(prefix1, concat(spine1, toNodes(toList(suffix1) ++ elems ++ toList(prefix1)), spine2), suffix2)
