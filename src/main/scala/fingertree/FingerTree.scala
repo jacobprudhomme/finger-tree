@@ -91,9 +91,15 @@ object FingerTree {
     prefixTail match {
       case Some(digit) => Deep(digit, spine, suffix)
       case None() =>
-        viewL(spine) match {
-          case ConsV(value, rest) => Deep(toDigit(value), rest, suffix)
-          case NilV()             => toTree(suffix)
+        spine match {
+          case Empty()       => toTree(suffix)
+          case Single(value) => Deep(toDigit(value), Empty(), suffix)
+          case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            Deep(
+              toDigit(headL(spinePrefix)),
+              deepL(tailL(spinePrefix), spineSpine, spineSuffix),
+              suffix
+            )
         }
     }
 
@@ -105,9 +111,15 @@ object FingerTree {
     suffixTail match {
       case Some(digit) => Deep(prefix, spine, digit)
       case None() =>
-        viewR(spine) match {
-          case ConsV(value, rest) => Deep(prefix, rest, toDigit(value))
-          case NilV()             => toTree(prefix)
+        spine match {
+          case Empty()       => toTree(prefix)
+          case Single(value) => Deep(prefix, Empty(), toDigit(value))
+          case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            Deep(
+              prefix,
+              deepR(spinePrefix, spineSpine, tailR(spineSuffix)),
+              toDigit(headR(spineSuffix))
+            )
         }
     }
 
