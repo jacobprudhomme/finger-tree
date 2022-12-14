@@ -242,7 +242,10 @@ object FingerTree {
     }
 
   def isEmpty[T](tree: FingerTree[T]): Boolean =
-    tree == Empty()
+    tree match {
+      case Empty() => true
+      case _       => false
+    }
 
   /// 3.3 CONCATENATION ///
 
