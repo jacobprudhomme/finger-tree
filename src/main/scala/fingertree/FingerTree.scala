@@ -1,16 +1,14 @@
-package fingertree
-
 import stainless.lang.{Option, Some, None, decreases}
 
-private sealed trait Node[T]
-private final case class Node2[T](a: T, b: T) extends Node[T]
-private final case class Node3[T](a: T, b: T, c: T) extends Node[T]
+sealed trait Node[T]
+final case class Node2[T](a: T, b: T) extends Node[T]
+final case class Node3[T](a: T, b: T, c: T) extends Node[T]
 
-private sealed trait Digit[T]
-private final case class Digit1[T](a: T) extends Digit[T]
-private final case class Digit2[T](a: T, b: T) extends Digit[T]
-private final case class Digit3[T](a: T, b: T, c: T) extends Digit[T]
-private final case class Digit4[T](a: T, b: T, c: T, d: T) extends Digit[T]
+sealed trait Digit[T]
+final case class Digit1[T](a: T) extends Digit[T]
+final case class Digit2[T](a: T, b: T) extends Digit[T]
+final case class Digit3[T](a: T, b: T, c: T) extends Digit[T]
+final case class Digit4[T](a: T, b: T, c: T, d: T) extends Digit[T]
 
 sealed trait FingerTree[T]
 final case class Empty[T]() extends FingerTree[T]
@@ -24,7 +22,7 @@ final case class Deep[T](
 object FingerTree {
   /// INTERNAL HELPERS ///
 
-  private def deepL[T](
+  def deepL[T](
       prefixTail: Option[Digit[T]],
       spine: FingerTree[Node[T]],
       suffix: Digit[T]
