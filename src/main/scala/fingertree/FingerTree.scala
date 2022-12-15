@@ -90,19 +90,16 @@ object FingerTree {
   ): FingerTree[T] =
     prefixTail match {
       case Some(digit) => Deep(digit, spine, suffix)
-      /* mutually recursive version
-      case None() =>
-        viewL(spine) match {
-          case ConsV(value, rest) => Deep(toDigit(value), rest, suffix)
-          case NilV()             => toTree(suffix)
-        }
-       */
       case None() =>
         spine match {
           case Empty()       => toTree(suffix)
           case Single(value) => Deep(toDigit(value), Empty(), suffix)
-          case Deep(pre, deeper, suf) =>
-            Deep(toDigit(headL(pre)), deepL(tailL(pre), deeper, suf), suffix)
+          case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            Deep(
+              toDigit(headL(spinePrefix)),
+              deepL(tailL(spinePrefix), spineSpine, spineSuffix),
+              suffix
+            )
         }
     }
 
@@ -113,19 +110,16 @@ object FingerTree {
   ): FingerTree[T] =
     suffixTail match {
       case Some(digit) => Deep(prefix, spine, digit)
-      /* mutually recursive version
-      case None() =>
-        viewR(spine) match {
-          case ConsV(value, rest) => Deep(prefix, rest, toDigit(value))
-          case NilV()             => toTree(prefix)
-        }
-       */
       case None() =>
         spine match {
           case Empty()       => toTree(prefix)
           case Single(value) => Deep(prefix, Empty(), toDigit(value))
-          case Deep(pre, deeper, suf) =>
-            Deep(prefix, deepR(pre, deeper, tailR(suf)), toDigit(headR(suf)))
+          case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            Deep(
+              prefix,
+              deepR(spinePrefix, spineSpine, tailR(spineSuffix)),
+              toDigit(headR(spineSuffix))
+            )
         }
     }
 
