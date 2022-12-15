@@ -90,18 +90,20 @@ object FingerTree {
   ): FingerTree[T] =
     prefixTail match {
       case Some(digit) => Deep(digit, spine, suffix)
-      case None() =>
-        spine match {
-          case Empty()       => toTree(suffix)
-          case Single(value) => Deep(toDigit(value), Empty(), suffix)
-          case Deep(spinePrefix, spineSpine, spineSuffix) =>
-            Deep(
-              toDigit(headL(spinePrefix)),
-              deepL(tailL(spinePrefix), spineSpine, spineSuffix),
-              suffix
-            )
+      /* mutually recursive version
+      case None() =>    
+        viewL(spine) match {
+          case ConsV(value, rest) => Deep(toDigit(value), rest, suffix)
+          case NilV()             => toTree(suffix)
         }
-    }
+      */  
+      case None() =>  
+        spine match{
+          case Empty() => toTree(suffix)
+          case Single(value) => Deep(toDigit(value), Empty(), suffix)
+          case Deep(pre, deeper, suf) => Deep(toDigit(headL(pre)), deepL(tailL(pre), deeper, suf), suffix)
+        }
+      }
 
   private def deepR[T](
       prefix: Digit[T],
@@ -109,28 +111,39 @@ object FingerTree {
       suffixTail: Option[Digit[T]]
   ): FingerTree[T] =
     suffixTail match {
-      case Some(digit) => Deep(prefix, spine, digit)
+      case Some(digit) => Deep(prefix, spine, digit) 
+      /* mutually recursive version
       case None() =>
-        spine match {
-          case Empty()       => toTree(prefix)
-          case Single(value) => Deep(prefix, Empty(), toDigit(value))
-          case Deep(spinePrefix, spineSpine, spineSuffix) =>
-            Deep(
-              prefix,
-              deepR(spinePrefix, spineSpine, tailR(spineSuffix)),
-              toDigit(headR(spineSuffix))
-            )
+        viewR(spine) match {
+          case ConsV(value, rest) => Deep(prefix, rest, toDigit(value))
+          case NilV()             => toTree(prefix)
         }
-    }
+      */
+      case None() =>  
+        spine match{
+          case Empty() => toTree(prefix)
+          case Single(value) => Deep(prefix, Empty(), toDigit(value))
+          case Deep(pre, deeper, suf) => Deep(prefix, deepR(pre, deeper, tailR(suf)), toDigit(headR(suf)))
+        }
+      }        
+    
+  
 
   /// CONVERSION FUNCTIONS ///
 
-  def toList[T](tree: FingerTree[T]): List[T] = {
-    ???
+  def toList[T](tree: FingerTree[T]): List[T] =
+    tree match{
+    case Empty() => Nil()
+    case Single(a) => Cons(a, Nil())
+    case Deep(prefix, spine, suffix) => 
+      Cons(headL(prefix), toList(deepL(tailL(prefix), spine, suffix)))
   }
 
-  def toTree[T](elems: List[T]): FingerTree[T] = {
-    ???
+  def toTree[T](elems: List[T]): FingerTree[T] =
+    elems match{
+    case Nil() => Empty()
+    case Cons(a, Nil()) => Single(a)
+    case Cons(a, b) => addL(toTree(b), a)
   }
 
   /// 3.2 DEQUE OPERATIONS ///
