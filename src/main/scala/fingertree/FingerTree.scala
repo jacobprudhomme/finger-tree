@@ -19,6 +19,15 @@ private sealed trait Node[T]:
       case Node3(left, middle, right) => Digit3(left, middle, right)
     }
 
+  def isWellFormed(depth: Int): Boolean =
+    this match
+      case Leaf(a) => depth == 0
+      case Node2(left, right) =>
+        left.isWellFormed(depth - 1) && right.isWellFormed(depth - 1)
+      case Node3(left, middle, right) =>
+        left.isWellFormed(depth - 1) && middle.isWellFormed(depth - 1) && right
+          .isWellFormed(depth - 1)
+
 private final case class Leaf[T](a: T) extends Node[T]
 private final case class Node2[T](left: Node[T], right: Node[T]) extends Node[T]
 private final case class Node3[T](
@@ -85,6 +94,13 @@ private sealed trait Digit[T]:
       case Digit4(a, b, c, d) => Deep(Digit2(a, b), Empty(), Digit2(c, d))
     }
 
+  def forall(p: Node[T] => Boolean): Boolean =
+    this match
+      case Digit1(a)          => p(a)
+      case Digit2(a, b)       => p(a) && p(b)
+      case Digit3(a, b, c)    => p(a) && p(b) && p(c)
+      case Digit4(a, b, c, d) => p(a) && p(b) && p(c) && p(d)
+
 private final case class Digit1[T](a: Node[T]) extends Digit[T]
 private final case class Digit2[T](a: Node[T], b: Node[T]) extends Digit[T]
 private final case class Digit3[T](a: Node[T], b: Node[T], c: Node[T])
@@ -97,14 +113,28 @@ private final case class Digit4[T](
 ) extends Digit[T]
 
 sealed trait FingerTree[T]:
+  /// STAINLESS HELPER ///
+
+  private def isWellFormed(depth: Int): Boolean =
+    this match
+      case Empty()       => true
+      case Single(value) => value.isWellFormed(depth)
+      case Deep(prefix, spine, suffix) =>
+        prefix.forall(_.isWellFormed(depth))
+        && spine.isWellFormed(depth + 1)
+        && suffix.forall(_.isWellFormed(depth))
+
+  private def isWellFormed: Boolean =
+    this.isWellFormed(0)
 
   /// CONVERSION FUNCTIONS ///
 
-  def toTree[T](elems: List[T]): FingerTree[T] =
+  def toTree[T](elems: List[T]): FingerTree[T] = {
     elems match {
       case Nil()      => Empty()
       case Cons(a, b) => toTree(b).addR(a)
     }
+  }.ensuring(_.isWellFormed)
 
   def toList: List[T] =
     this match {
@@ -193,10 +223,12 @@ sealed trait FingerTree[T]:
         )
     }
 
-  def addL(value: T): FingerTree[T] =
+  def addL(value: T): FingerTree[T] = {
+    require(this.isWellFormed)
     this.addL(Leaf(value))
+  }.ensuring(_.isWellFormed)
 
-  def addR(value: Node[T]): FingerTree[T] =
+  private def addR(value: Node[T]): FingerTree[T] =
     this match {
       case Empty() => Single(value)
       case Single(existingValue) =>
@@ -231,10 +263,13 @@ sealed trait FingerTree[T]:
         )
     }
 
-  def addR(value: T): FingerTree[T] =
+  def addR(value: T): FingerTree[T] = {
+    require(this.isWellFormed)
     this.addR(Leaf(value))
+  }.ensuring(_.isWellFormed)
 
-  def viewL: View[T] =
+  def viewL: View[T] = {
+    require(this.isWellFormed)
     this match {
       case Empty()             => NilV()
       case Single(Leaf(value)) => ConsV(value, Empty())
@@ -249,8 +284,10 @@ sealed trait FingerTree[T]:
           case _ => ??? // not supposed to happen I think ?
         }
     }
+  }
 
-  def viewR: View[T] =
+  def viewR: View[T] = {
+    require(this.isWellFormed)
     this match {
       case Empty()             => NilV()
       case Single(Leaf(value)) => ConsV(value, Empty())
@@ -265,8 +302,10 @@ sealed trait FingerTree[T]:
           case _ => ??? // not supposed to happen I think ?
         }
     }
+  }
 
-  def headL: Option[T] =
+  def headL: Option[T] = {
+    require(this.isWellFormed)
     this match {
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
@@ -277,8 +316,10 @@ sealed trait FingerTree[T]:
           case _           => ??? // not supposed to happen I think ?
         }
     }
+  }
 
-  def headR: Option[T] =
+  def headR: Option[T] = {
+    require(this.isWellFormed)
     this match {
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
@@ -289,18 +330,23 @@ sealed trait FingerTree[T]:
           case _           => ??? // not supposed to happen I think ?
         }
     }
+  }
 
-  def tailL: Option[FingerTree[T]] =
+  def tailL: Option[FingerTree[T]] = {
+    require(this.isWellFormed)
     this.viewL match {
       case ConsV(_, rest) => Some(rest)
       case NilV()         => None()
     }
+  }
 
-  def tailR: Option[FingerTree[T]] =
+  def tailR: Option[FingerTree[T]] = {
+    require(this.isWellFormed)
     this.viewR match {
       case ConsV(_, rest) => Some(rest)
       case NilV()         => None()
     }
+  }
 
   def isEmpty: Boolean =
     this match {
@@ -347,10 +393,15 @@ sealed trait FingerTree[T]:
         }
     }
 
-  def ++[T](tree1: FingerTree[T], tree2: FingerTree[T]): FingerTree[T] =
+  def ++[T](tree1: FingerTree[T], tree2: FingerTree[T]): FingerTree[T] = {
+    require(tree1.isWellFormed && tree2.isWellFormed)
     tree1.concat(tree2)
+  }.ensuring(_.isWellFormed)
 
-  def concat(tree: FingerTree[T]): FingerTree[T] = concat(this, Nil(), tree)
+  def concat(tree: FingerTree[T]): FingerTree[T] = {
+    require(this.isWellFormed && tree.isWellFormed)
+    concat(this, Nil(), tree)
+  }.ensuring(_.isWellFormed)
 
 final case class Empty[T]() extends FingerTree[T]
 final case class Single[T](value: Node[T]) extends FingerTree[T]
