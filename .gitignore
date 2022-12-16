@@ -41,3 +41,5 @@ bin/
 
 # General
 *.class
+
+.stainless-cache
