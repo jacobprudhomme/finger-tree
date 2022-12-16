@@ -19,14 +19,20 @@ private sealed trait Node[T]:
       case Node3(left, middle, right) => Digit3(left, middle, right)
     }
 
-  def isWellFormed(depth: Int): Boolean =
+  def isWellFormed(depth: BigInt): Boolean = {
+    require(depth >= 0)
     this match
       case Leaf(a) => depth == 0
       case Node2(left, right) =>
-        left.isWellFormed(depth - 1) && right.isWellFormed(depth - 1)
+        depth != 0
+        && left.isWellFormed(depth - 1)
+        && right.isWellFormed(depth - 1)
       case Node3(left, middle, right) =>
-        left.isWellFormed(depth - 1) && middle.isWellFormed(depth - 1) && right
-          .isWellFormed(depth - 1)
+        depth != 0
+        && left.isWellFormed(depth - 1)
+        && middle.isWellFormed(depth - 1)
+        && right.isWellFormed(depth - 1)
+  }
 
 private final case class Leaf[T](a: T) extends Node[T]
 private final case class Node2[T](left: Node[T], right: Node[T]) extends Node[T]
@@ -115,7 +121,7 @@ private final case class Digit4[T](
 sealed trait FingerTree[T]:
   /// STAINLESS HELPER ///
 
-  private def isWellFormed(depth: Int): Boolean =
+  private def isWellFormed(depth: BigInt): Boolean =
     this match
       case Empty()       => true
       case Single(value) => value.isWellFormed(depth)
@@ -188,7 +194,8 @@ sealed trait FingerTree[T]:
 
   /// 3.2 DEQUE OPERATIONS ///
 
-  private def addL(value: Node[T]): FingerTree[T] =
+  private def addL(value: Node[T], depth: BigInt): FingerTree[T] = {
+    require(depth >= 0 && this.isWellFormed(depth) && value.isWellFormed(depth))
     this match {
       case Empty() => Single(value)
       case Single(existingValue) =>
@@ -218,17 +225,19 @@ sealed trait FingerTree[T]:
       case Deep(Digit4(a, b, c, d), spine, suffix) =>
         Deep(
           Digit2(value, a),
-          spine.addL(Node3(b, c, d)),
+          spine.addL(Node3(b, c, d), depth + 1),
           suffix
         )
     }
+  }.ensuring(_.isWellFormed(depth))
 
   def addL(value: T): FingerTree[T] = {
     require(this.isWellFormed)
-    this.addL(Leaf(value))
+    this.addL(Leaf(value), 0)
   }.ensuring(_.isWellFormed)
 
-  private def addR(value: Node[T]): FingerTree[T] =
+  private def addR(value: Node[T], depth: BigInt): FingerTree[T] = {
+    require(depth >= 0 && this.isWellFormed(depth) && value.isWellFormed(depth))
     this match {
       case Empty() => Single(value)
       case Single(existingValue) =>
@@ -258,14 +267,15 @@ sealed trait FingerTree[T]:
       case Deep(prefix, spine, Digit4(a, b, c, d)) =>
         Deep(
           prefix,
-          spine.addR(Node3(a, b, c)),
+          spine.addR(Node3(a, b, c), depth + 1),
           Digit2(d, value)
         )
     }
+  }.ensuring(_.isWellFormed(depth))
 
   def addR(value: T): FingerTree[T] = {
     require(this.isWellFormed)
-    this.addR(Leaf(value))
+    this.addR(Leaf(value), 0)
   }.ensuring(_.isWellFormed)
 
   def viewL: View[T] = {
@@ -356,7 +366,12 @@ sealed trait FingerTree[T]:
 
   /// 3.3 CONCATENATION ///
 
-  private def toNodes[T](elems: List[Node[T]]): List[Node[T]] =
+  private def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
+    require(
+      depth >= 0
+        && elems.size != BigInt(1)
+        && elems.forall(_.isWellFormed(depth))
+    )
     elems match {
       case Nil()                            => Nil()
       case Cons(a, Nil())                   => ???
@@ -365,33 +380,46 @@ sealed trait FingerTree[T]:
       case Cons(a, Cons(b, Cons(c, Cons(d, Nil())))) =>
         List(Node2(a, b), Node2(c, d))
       case Cons(a, Cons(b, Cons(c, tail))) =>
-        Cons(Node3(a, b, c), toNodes(tail))
+        Cons(Node3(a, b, c), toNodes(tail, depth))
     }
+  }.ensuring(_.forall(_.isWellFormed(depth + 1)))
 
   private def concat[T](
       tree1: FingerTree[T],
       elems: List[Node[T]],
-      tree2: FingerTree[T]
-  ): FingerTree[T] =
+      tree2: FingerTree[T],
+      depth: BigInt
+  ): FingerTree[T] = {
+    require(
+      depth >= 0
+        && tree1.isWellFormed(depth)
+        && tree2.isWellFormed(depth)
+        && elems.forall(_.isWellFormed(depth))
+    )
     tree1 match {
       case Empty()   => tree2
-      case Single(e) => tree2.addL(e)
+      case Single(e) => tree2.addL(e, depth)
       case Deep(prefix1, spine1, suffix1) =>
         tree2 match {
           case Empty()   => tree1
-          case Single(e) => tree1.addR(e)
+          case Single(e) => tree1.addR(e, depth)
           case Deep(prefix2, spine2, suffix2) =>
             Deep(
               prefix1,
               concat(
                 spine1,
-                toNodes(suffix1.toNodeList ++ elems ++ prefix1.toNodeList),
-                spine2
+                toNodes(
+                  suffix1.toNodeList ++ elems ++ prefix1.toNodeList,
+                  depth
+                ),
+                spine2,
+                depth + 1
               ),
               suffix2
             )
         }
     }
+  }
 
   def ++[T](tree1: FingerTree[T], tree2: FingerTree[T]): FingerTree[T] = {
     require(tree1.isWellFormed && tree2.isWellFormed)
@@ -400,7 +428,7 @@ sealed trait FingerTree[T]:
 
   def concat(tree: FingerTree[T]): FingerTree[T] = {
     require(this.isWellFormed && tree.isWellFormed)
-    concat(this, Nil(), tree)
+    concat(this, Nil(), tree, 0)
   }.ensuring(_.isWellFormed)
 
 final case class Empty[T]() extends FingerTree[T]
