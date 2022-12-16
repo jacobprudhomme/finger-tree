@@ -3,7 +3,22 @@ package fingertree
 import stainless.collection.{List, Cons, Nil}
 import stainless.lang.{Option, Some, None}
 
-private sealed trait Node[T]
+private sealed trait Node[T]:
+  def toList: List[T] =
+    this match {
+      case Leaf(a)            => List(a)
+      case Node2(left, right) => left.toList ++ right.toList
+      case Node3(left, middle, right) =>
+        left.toList ++ middle.toList ++ right.toList
+    }
+
+  def toDigit: Digit[T] =
+    this match {
+      case Leaf(_)                    => ???
+      case Node2(left, right)         => Digit2(left, right)
+      case Node3(left, middle, right) => Digit3(left, middle, right)
+    }
+
 private final case class Leaf[T](a: T) extends Node[T]
 private final case class Node2[T](left: Node[T], right: Node[T]) extends Node[T]
 private final case class Node3[T](
@@ -12,19 +27,77 @@ private final case class Node3[T](
     right: Node[T]
 ) extends Node[T]
 
-private sealed trait Digit[T]
-private final case class Digit1[T](a: T) extends Digit[T]
-private final case class Digit2[T](a: T, b: T) extends Digit[T]
-private final case class Digit3[T](a: T, b: T, c: T) extends Digit[T]
-private final case class Digit4[T](a: T, b: T, c: T, d: T) extends Digit[T]
+private sealed trait Digit[T]:
+  def headL: Node[T] =
+    this match {
+      case Digit1(a) => a
+      case Digit2(a, _) => a
+      case Digit3(a, _, _) => a
+      case Digit4(a, _, _, _) => a
+    }
+
+  def headR: Node[T] =
+    this match {
+      case Digit1(a)          => a
+      case Digit2(_, b)       => b
+      case Digit3(_, _, c)    => c
+      case Digit4(_, _, _, d) => d
+    }
+
+  def tailL: Option[Digit[T]] =
+    this match {
+      case Digit1(_)          => None()
+      case Digit2(_, b)       => Some(Digit1(b))
+      case Digit3(_, b, c)    => Some(Digit2(b, c))
+      case Digit4(_, b, c, d) => Some(Digit3(b, c, d))
+    }
+
+  def tailR: Option[Digit[T]] =
+    this match {
+      case Digit1(_)          => None()
+      case Digit2(a, _)       => Some(Digit1(a))
+      case Digit3(a, b, _)    => Some(Digit2(a, b))
+      case Digit4(a, b, c, _) => Some(Digit3(a, b, c))
+    }
+
+  def toNodeList: List[Node[T]] =
+    this match {
+      case Digit1(a)          => List(a)
+      case Digit2(a, b)       => List(a, b)
+      case Digit3(a, b, c)    => List(a, b, c)
+      case Digit4(a, b, c, d) => List(a, b, c, d)
+    }
+
+  def toList: List[T] =
+    this match {
+      case Digit1(a)       => a.toList
+      case Digit2(a, b)    => a.toList ++ b.toList
+      case Digit3(a, b, c) => a.toList ++ b.toList ++ c.toList
+      case Digit4(a, b, c, d) =>
+        a.toList ++ b.toList ++ c.toList ++ d.toList
+    }
+
+  def toTree: FingerTree[T] =
+    this match {
+      case Digit1(a)          => Single(a)
+      case Digit2(a, b)       => Deep(Digit1(a), Empty(), Digit1(b))
+      case Digit3(a, b, c)    => Deep(Digit2(a, b), Empty(), Digit1(c))
+      case Digit4(a, b, c, d) => Deep(Digit2(a, b), Empty(), Digit2(c, d))
+    }
+
+
+private final case class Digit1[T](a: Node[T]) extends Digit[T]
+private final case class Digit2[T](a: Node[T], b: Node[T]) extends Digit[T]
+private final case class Digit3[T](a: Node[T], b: Node[T], c: Node[T]) extends Digit[T]
+private final case class Digit4[T](a: Node[T], b: Node[T], c: Node[T], d: Node[T]) extends Digit[T]
 
 sealed trait FingerTree[T]
 final case class Empty[T]() extends FingerTree[T]
 final case class Single[T](value: Node[T]) extends FingerTree[T]
 final case class Deep[T](
-    prefix: Digit[Node[T]],
+    prefix: Digit[T],
     spine: FingerTree[T],
-    suffix: Digit[Node[T]]
+    suffix: Digit[T]
 ) extends FingerTree[T]
 
 sealed trait View[T]
@@ -32,116 +105,45 @@ final case class NilV[T]() extends View[T]
 final case class ConsV[T](value: T, rest: FingerTree[T]) extends View[T]
 
 object FingerTree {
+
   /// INTERNAL HELPERS ///
 
-  private def headL[T](digit: Digit[Node[T]]): Node[T] =
-    digit match {
-      case Digit1(a)          => a
-      case Digit2(a, _)       => a
-      case Digit3(a, _, _)    => a
-      case Digit4(a, _, _, _) => a
-    }
-
-  private def headR[T](digit: Digit[Node[T]]): Node[T] =
-    digit match {
-      case Digit1(a)          => a
-      case Digit2(_, b)       => b
-      case Digit3(_, _, c)    => c
-      case Digit4(_, _, _, d) => d
-    }
-
-  private def tailL[T](digit: Digit[Node[T]]): Option[Digit[Node[T]]] =
-    digit match {
-      case Digit1(_)          => None()
-      case Digit2(_, b)       => Some(Digit1(b))
-      case Digit3(_, b, c)    => Some(Digit2(b, c))
-      case Digit4(_, b, c, d) => Some(Digit3(b, c, d))
-    }
-
-  private def tailR[T](digit: Digit[Node[T]]): Option[Digit[Node[T]]] =
-    digit match {
-      case Digit1(_)          => None()
-      case Digit2(a, _)       => Some(Digit1(a))
-      case Digit3(a, b, _)    => Some(Digit2(a, b))
-      case Digit4(a, b, c, _) => Some(Digit3(a, b, c))
-    }
-
-  private def toNodeList[T](digit: Digit[Node[T]]): List[Node[T]] =
-    digit match {
-      case Digit1(a)          => List(a)
-      case Digit2(a, b)       => List(a, b)
-      case Digit3(a, b, c)    => List(a, b, c)
-      case Digit4(a, b, c, d) => List(a, b, c, d)
-    }
-
-  private def toList[T](node: Node[T]): List[T] =
-    node match {
-      case Leaf(a)            => List(a)
-      case Node2(left, right) => toList(left) ++ toList(right)
-      case Node3(left, middle, right) =>
-        toList(left) ++ toList(middle) ++ toList(right)
-    }
-
-  private def toList[T](digit: Digit[Node[T]]): List[T] =
-    digit match {
-      case Digit1(a)       => toList(a)
-      case Digit2(a, b)    => toList(a) ++ toList(b)
-      case Digit3(a, b, c) => toList(a) ++ toList(b) ++ toList(c)
-      case Digit4(a, b, c, d) =>
-        toList(a) ++ toList(b) ++ toList(c) ++ toList(d)
-    }
-
-  private def toDigit[T](node: Node[T]): Digit[Node[T]] =
-    node match {
-      case Leaf(_)                    => ???
-      case Node2(left, right)         => Digit2(left, right)
-      case Node3(left, middle, right) => Digit3(left, middle, right)
-    }
-
-  private def toTree[T](elems: Digit[Node[T]]): FingerTree[T] =
-    elems match {
-      case Digit1(a)          => Single(a)
-      case Digit2(a, b)       => Deep(Digit1(a), Empty(), Digit1(b))
-      case Digit3(a, b, c)    => Deep(Digit2(a, b), Empty(), Digit1(c))
-      case Digit4(a, b, c, d) => Deep(Digit2(a, b), Empty(), Digit2(c, d))
-    }
-
   private def deepL[T](
-      prefixTail: Option[Digit[Node[T]]],
+      prefixTail: Option[Digit[T]],
       spine: FingerTree[T],
-      suffix: Digit[Node[T]]
+      suffix: Digit[T]
   ): FingerTree[T] =
     prefixTail match {
       case Some(digit) => Deep(digit, spine, suffix)
       case None() =>
         spine match {
-          case Empty()       => toTree(suffix)
-          case Single(value) => Deep(toDigit(value), Empty(), suffix)
+          case Empty()       => suffix.toTree
+          case Single(value) => Deep(value.toDigit, Empty(), suffix)
           case Deep(spinePrefix, spineSpine, spineSuffix) =>
             Deep(
-              toDigit(headL(spinePrefix)),
-              deepL(tailL(spinePrefix), spineSpine, spineSuffix),
+              spinePrefix.headL.toDigit,
+              deepL(spinePrefix.tailL, spineSpine, spineSuffix),
               suffix
             )
         }
     }
 
   private def deepR[T](
-      prefix: Digit[Node[T]],
+      prefix: Digit[T],
       spine: FingerTree[T],
-      suffixTail: Option[Digit[Node[T]]]
+      suffixTail: Option[Digit[T]]
   ): FingerTree[T] =
     suffixTail match {
       case Some(digit) => Deep(prefix, spine, digit)
       case None() =>
         spine match {
-          case Empty()       => toTree(prefix)
-          case Single(value) => Deep(prefix, Empty(), toDigit(value))
+          case Empty()       => prefix.toTree
+          case Single(value) => Deep(prefix, Empty(), value.toDigit)
           case Deep(spinePrefix, spineSpine, spineSuffix) =>
             Deep(
               prefix,
-              deepR(spinePrefix, spineSpine, tailR(spineSuffix)),
-              toDigit(headR(spineSuffix))
+              deepR(spinePrefix, spineSpine, spineSuffix.tailR),
+              spineSuffix.headR.toDigit
             )
         }
     }
@@ -151,9 +153,9 @@ object FingerTree {
   def toList[T](tree: FingerTree[T]): List[T] =
     tree match {
       case Empty()   => Nil()
-      case Single(a) => toList(a)
+      case Single(a) => a.toList
       case Deep(prefix, spine, suffix) =>
-        toList(prefix) ++ toList(spine) ++ toList(suffix)
+        prefix.toList ++ toList(spine) ++ suffix.toList
     }
 
   def toTree[T](elems: List[T]): FingerTree[T] =
@@ -246,11 +248,11 @@ object FingerTree {
       case Single(Leaf(value)) => ConsV(value, Empty())
       case Single(_)           => ??? // not supposed to happen I think ?
       case Deep(prefix, spine, suffix) =>
-        headL(prefix) match {
+        prefix.headL match {
           case Leaf(value) =>
             ConsV(
               value,
-              deepL(tailL(prefix), spine, suffix)
+              deepL(prefix.tailL, spine, suffix)
             )
           case _ => ??? // not supposed to happen I think ?
         }
@@ -262,11 +264,11 @@ object FingerTree {
       case Single(Leaf(value)) => ConsV(value, Empty())
       case Single(_)           => ??? // not supposed to happen I think ?
       case Deep(prefix, spine, suffix) =>
-        headR(suffix) match {
+        suffix.headR match {
           case Leaf(value) =>
             ConsV(
               value,
-              deepR(prefix, spine, tailR(suffix))
+              deepR(prefix, spine, suffix.tailR)
             )
           case _ => ??? // not supposed to happen I think ?
         }
@@ -278,7 +280,7 @@ object FingerTree {
       case Single(Leaf(e)) => Some(e)
       case Single(_)       => ??? // not supposed to happen I think ?
       case Deep(prefix, _, _) =>
-        headL(prefix) match {
+        prefix.headL match {
           case Leaf(value) => Some(value)
           case _           => ??? // not supposed to happen I think ?
         }
@@ -290,7 +292,7 @@ object FingerTree {
       case Single(Leaf(e)) => Some(e)
       case Single(_)       => ??? // not supposed to happen I think ?
       case Deep(prefix, _, _) =>
-        headR(prefix) match {
+        prefix.headR match {
           case Leaf(value) => Some(value)
           case _           => ??? // not supposed to happen I think ?
         }
@@ -345,7 +347,7 @@ object FingerTree {
               prefix1,
               concat(
                 spine1,
-                toNodes(toNodeList(suffix1) ++ elems ++ toNodeList(prefix1)),
+                toNodes(suffix1.toNodeList ++ elems ++ prefix1.toNodeList),
                 spine2
               ),
               suffix2
