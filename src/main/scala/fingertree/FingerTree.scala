@@ -599,14 +599,17 @@ sealed trait FingerTree[T]:
   }.holds
 
   def isEmpty_left(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
     t.concat(Empty()).isEmpty == t.isEmpty
   }.holds
 
   def isEmpty_right(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
     Empty().concat(t).isEmpty == t.isEmpty
   }.holds
 
   def isEmpty_concat(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
+    require(t1.isWellFormed && t2.isWellFormed)
     t1.concat(t2).isEmpty == (t1.isEmpty && t2.isEmpty)
   }.holds
 
@@ -615,24 +618,30 @@ sealed trait FingerTree[T]:
   }.holds
 
   def headL_law(t: FingerTree[T]): Boolean ={
+    require(t.isWellFormed)
     t.headL == t.toList.headOption
   }.holds
 
   def headR_law(t: FingerTree[T]): Boolean ={
+    require(t.isWellFormed)
     t.headR == t.toList.lastOption
   }.holds
 
   def addL_law(t: FingerTree[T], value: T): Boolean ={
+    require(t.isWellFormed)
     t.addL(value).toList == value :: t.toList
   }.holds
 
   def addR_law(t: FingerTree[T], value: T): Boolean ={
+    require(t.isWellFormed)
     t.addR(value).toList == t.toList :+ value
   }.holds
 
   def concat_law(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
+    require(t1.isWellFormed && t2.isWellFormed)
     t1.concat(t2).toList == t1.toList ++ t2.toList
   }.holds
+  
 
 final case class Empty[T]() extends FingerTree[T]
 final case class Single[T](value: Node[T]) extends FingerTree[T]
