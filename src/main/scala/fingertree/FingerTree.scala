@@ -19,7 +19,7 @@ private sealed trait Node[T]:
       case Node2(left, right)         => Digit2(left, right)
       case Node3(left, middle, right) => Digit3(left, middle, right)
     }
-  }.ensuring(_.isWellFormed(depth))
+  }.ensuring(_.isWellFormed(depth - 1))
 
   def isWellFormed(depth: BigInt): Boolean = {
     require(depth >= 0)
