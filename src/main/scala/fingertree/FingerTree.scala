@@ -161,7 +161,7 @@ sealed trait FingerTree[T]:
   def toTree[T](elems: List[T]): FingerTree[T] = {
     elems match {
       case Nil()      => Empty()
-      case Cons(a, b) => toTree(b).addR(a)
+      case Cons(a, b) => toTree(b).addL(a)
     }
   }.ensuring(_.isWellFormed)
 
