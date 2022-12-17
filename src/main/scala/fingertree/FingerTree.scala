@@ -1,7 +1,7 @@
 package fingertree
 
 import stainless.collection.{List, Cons, Nil}
-import stainless.lang.{Option, Some, None}
+import stainless.lang.{Option, Some, None, BooleanDecorations}
 
 private sealed trait Node[T]:
   def toList: List[T] =
@@ -589,6 +589,50 @@ sealed trait FingerTree[T]:
     require(this.isWellFormed && tree.isWellFormed)
     concat(this, Nil(), tree, 0)
   }.ensuring(_.isWellFormed)
+
+  /// PROOF ///
+  def isEmpty_law(t: FingerTree[T]): Boolean = {
+    t match{
+      case Empty() => t.isEmpty == true
+      case _ => t.isEmpty == false
+    }
+  }.holds
+
+  def isEmpty_left(t: FingerTree[T]): Boolean = {
+    t.concat(Empty()).isEmpty == t.isEmpty
+  }.holds
+
+  def isEmpty_right(t: FingerTree[T]): Boolean = {
+    Empty().concat(t).isEmpty == t.isEmpty
+  }.holds
+
+  def isEmpty_concat(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
+    t1.concat(t2).isEmpty == (t1.isEmpty && t2.isEmpty)
+  }.holds
+
+  def toTree_toList(l: List[T]): Boolean ={
+    toTree(l).toList == l
+  }.holds
+
+  def headL_law(t: FingerTree[T]): Boolean ={
+    t.headL == t.toList.headOption
+  }.holds
+
+  def headR_law(t: FingerTree[T]): Boolean ={
+    t.headR == t.toList.lastOption
+  }.holds
+
+  def addL_law(t: FingerTree[T], value: T): Boolean ={
+    t.addL(value).toList == value :: t.toList
+  }.holds
+
+  def addR_law(t: FingerTree[T], value: T): Boolean ={
+    t.addR(value).toList == t.toList :+ value
+  }.holds
+
+  def concat_law(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
+    t1.concat(t2).toList == t1.toList ++ t2.toList
+  }.holds
 
 final case class Empty[T]() extends FingerTree[T]
 final case class Single[T](value: Node[T]) extends FingerTree[T]
