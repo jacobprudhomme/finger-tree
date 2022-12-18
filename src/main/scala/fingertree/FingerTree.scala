@@ -1,7 +1,8 @@
 package fingertree
 
-import stainless.collection.{List, Cons, Nil}
-import stainless.lang.{Option, Some, None}
+import stainless.lang._
+import stainless.collection._
+import stainless.proof._
 
 private sealed trait Node[T]:
   def toList: List[T] =
@@ -85,17 +86,15 @@ private sealed trait Digit[T]:
     }
   }.ensuring(_.forall(_.isWellFormed(depth)))
 
+  // this is awful but stainless loves it
   def toNodeList(depth: BigInt): List[Node[T]] = {
     require(depth >= 0 && this.isWellFormed(depth))
-    this match {
-      case Digit1(a)          => List(a)
-      case Digit2(a, b)       => List(a, b)
-      case Digit3(a, b, c)    => List(a, b, c)
-      case Digit4(a, b, c, d) => List(a, b, c, d)
+    decreases(this)
+    this.tailL(depth) match {
+      case None()     => List(this.headL(depth))
+      case Some(tail) => Cons(this.headL(depth), tail.toNodeList(depth))
     }
-  }.ensuring(res =>
-    res.length >= 1 && res.length <= 4 && res.forall(_.isWellFormed(depth))
-  )
+  }.ensuring(res => !res.isEmpty && res.forall(_.isWellFormed(depth)))
 
   def toList: List[T] =
     this match {
@@ -448,7 +447,6 @@ sealed trait FingerTree[T]:
     require(
       depth >= 0
         && elems.size >= 2
-        && elems.size <= 12
         && elems.forall(_.isWellFormed(depth))
     )
     elems match {
@@ -458,88 +456,26 @@ sealed trait FingerTree[T]:
       case Cons(a, Cons(b, Cons(c, Nil()))) => List(Node3(a, b, c))
       case Cons(a, Cons(b, Cons(c, Cons(d, Nil())))) =>
         List(Node2(a, b), Node2(c, d))
-      case Cons(a, Cons(b, Cons(c, Cons(d, Cons(e, Nil()))))) =>
-        List(Node3(a, b, c), Node2(d, e))
-      case Cons(a, Cons(b, Cons(c, Cons(d, Cons(e, Cons(f, Nil())))))) =>
-        List(Node3(a, b, c), Node3(d, e, f))
-      case Cons(
-            a,
-            Cons(b, Cons(c, Cons(d, Cons(e, Cons(f, Cons(g, Nil()))))))
-          ) =>
-        List(Node3(a, b, c), Node2(d, e), Node2(f, g))
-      case Cons(
-            a,
-            Cons(b, Cons(c, Cons(d, Cons(e, Cons(f, Cons(g, Cons(h, Nil())))))))
-          ) =>
-        List(Node3(a, b, c), Node3(d, e, f), Node2(g, h))
-      case Cons(
-            a,
-            Cons(
-              b,
-              Cons(
-                c,
-                Cons(d, Cons(e, Cons(f, Cons(g, Cons(h, Cons(i, Nil()))))))
-              )
-            )
-          ) =>
-        List(Node3(a, b, c), Node3(d, e, f), Node3(g, h, i))
-      case Cons(
-            a,
-            Cons(
-              b,
-              Cons(
-                c,
-                Cons(
-                  d,
-                  Cons(e, Cons(f, Cons(g, Cons(h, Cons(i, Cons(j, Nil()))))))
-                )
-              )
-            )
-          ) =>
-        List(Node3(a, b, c), Node3(d, e, f), Node2(g, h), Node2(i, j))
-      case Cons(
-            a,
-            Cons(
-              b,
-              Cons(
-                c,
-                Cons(
-                  d,
-                  Cons(
-                    e,
-                    Cons(f, Cons(g, Cons(h, Cons(i, Cons(j, Cons(k, Nil()))))))
-                  )
-                )
-              )
-            )
-          ) =>
-        List(Node3(a, b, c), Node3(d, e, f), Node3(g, h, i), Node2(j, k))
-      case Cons(
-            a,
-            Cons(
-              b,
-              Cons(
-                c,
-                Cons(
-                  d,
-                  Cons(
-                    e,
-                    Cons(
-                      f,
-                      Cons(
-                        g,
-                        Cons(h, Cons(i, Cons(j, Cons(k, Cons(l, Nil())))))
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          ) =>
-        List(Node3(a, b, c), Node3(d, e, f), Node3(g, h, i), Node3(j, k, l))
-      case _ => ???
+      case Cons(a, Cons(b, Cons(c, tail))) => {
+        Cons(Node3(a, b, c), toNodes(tail, depth))
+      }
     }
-  }.ensuring(res => res.size <= 4 && res.forall(_.isWellFormed(depth + 1)))
+  }.ensuring(_.forall(_.isWellFormed(depth + 1)))
+
+  private def forallConcat[T](
+      l1: List[T],
+      l2: List[T],
+      p: T => Boolean
+  ): Boolean = {
+    require(l1.forall(p) && l2.forall(p))
+
+    (l1 ++ l2).forall(p) because {
+      l1 match {
+        case Nil()      => l2.forall(p)
+        case Cons(h, t) => p(h) && forallConcat(t, l2, p)
+      }
+    }
+  }.holds
 
   private def concat[T](
       tree1: FingerTree[T],
@@ -553,30 +489,23 @@ sealed trait FingerTree[T]:
         && tree2.isWellFormed(depth)
         && elems.forall(_.isWellFormed(depth))
     )
-    tree1 match {
-      case Empty()   => tree2.addL(elems, depth)
-      case Single(e) => tree2.addL(e, depth).addL(elems, depth)
-      case Deep(prefix1, spine1, suffix1) =>
-        tree2 match {
-          case Empty()   => tree1.addR(elems, depth)
-          case Single(e) => tree1.addR(e, depth).addR(elems, depth)
-          case Deep(prefix2, spine2, suffix2) =>
-            Deep(
-              prefix1,
-              concat(
-                spine1,
-                toNodes(
-                  suffix1.toNodeList(depth)
-                    ++ elems
-                    ++ prefix1.toNodeList(depth),
-                  depth
-                ),
-                spine2,
-                depth + 1
-              ),
-              suffix2
-            )
-        }
+    decreases(tree1)
+    (tree1, tree2) match {
+      case (Empty(), _)   => tree2.addL(elems, depth)
+      case (Single(e), _) => tree2.addL(e, depth).addL(elems, depth)
+      case (_, Empty())   => tree1.addR(elems, depth)
+      case (_, Single(e)) => tree1.addR(e, depth).addR(elems, depth)
+      case (Deep(prefix1, spine1, suffix1), Deep(prefix2, spine2, suffix2)) =>
+        val elemsTree1 = suffix1.toNodeList(depth)
+        val elemsTree2 = prefix1.toNodeList(depth)
+        forallConcat(elemsTree1, elems, _.isWellFormed(depth))
+        forallConcat(elemsTree1 ++ elems, elemsTree2, _.isWellFormed(depth))
+        val elemsRec = elemsTree1 ++ elems ++ elemsTree2
+        Deep(
+          prefix1,
+          concat(spine1, toNodes(elemsRec, depth), spine2, depth + 1),
+          suffix2
+        )
     }
   }.ensuring(_.isWellFormed(depth))
 
