@@ -589,7 +589,9 @@ sealed trait FingerTree[T]:
     concat(this, Nil(), tree, 0)
   }.ensuring(_.isWellFormed)
 
-  /// PROOF ///
+  /// PROPERTIES ///
+
+  // EMPTY //
   def isEmpty_law(t: FingerTree[T]): Boolean = {
     t match {
       case Empty() => t.isEmpty == true
@@ -612,6 +614,7 @@ sealed trait FingerTree[T]:
     t1.concat(t2).isEmpty == (t1.isEmpty && t2.isEmpty)
   }.holds
 
+  // toTree //
   def toTree_toListL(l: List[T]): Boolean = {
     toTreeL(l).toListL == l
   }.holds
@@ -620,6 +623,7 @@ sealed trait FingerTree[T]:
     toTreeR(l).toListR == l
   }.holds
 
+  // head //
   def headL_ListL_head(t: FingerTree[T]): Boolean = {
     require(t.isWellFormed)
     t.headL == t.toListL.headOption
@@ -640,6 +644,18 @@ sealed trait FingerTree[T]:
     t.headR == t.toListL.lastOption
   }.holds
 
+  // tail //
+  def tailL_law(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
+    t.tailL.map(_.toListL) == t.toListL.tailOption
+  }.holds
+
+  def tailR_law(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
+    t.tailR.map(_.toListR) == t.toListR.tailOption
+  }.holds
+
+  // add //
   def addL_law(t: FingerTree[T], value: T): Boolean = {
     require(t.isWellFormed)
     t.addL(value).toListL == value :: t.toListL
@@ -650,6 +666,7 @@ sealed trait FingerTree[T]:
     t.addR(value).toListR == value :: t.toListR
   }.holds
 
+  // concat //
   def concat_listL(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
     require(t1.isWellFormed && t2.isWellFormed)
     t1.concat(t2).toListL == t1.toListL ++ t2.toListL
