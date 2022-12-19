@@ -1,19 +1,23 @@
 - [ ] last(append(t, x)) == x
-- [ ] head(prepend(t, x)) == x
+- [x] t.addL(x).headL == x
 
-- [ ] tolist(append(t, x)) == tolist(t) ++ x
-- [ ] tolist(prepend(t, x)) == x ++ tolist(t)
+- [x] tolist(append(t, x)).last ==  x
+- [x] tolist(prepend(t, x)).head == x
 - [ ] tolist(concat(t1, t2)) == tolist(t1) ++ tolist(t2)
+- [x] concat(t1, t2).headL == t1.headL.orElse(t2.headL)
+- [ ] concat(t1, t2).headR == t2.headR.orElse(t1.headR)
 
-- [ ] head(concat(empty, t2)) == head(t2)
-- [ ] head(concat(t2, empty)) == getfirst(t2)
+- [x] headL(concat(empty, t2)) == headL(t2)
+- [x] headR(concat(t2, empty)) == headR(t2)
 - [ ] last(concat(empty, t2)) == last(t2)
 - [ ] last(concat(t2, empty)) == last(t2)
 
 - [ ] (a, b, c) = split(pred, t) ; tolist(t) == a ++ b ++ c
 
-- [ ] isempty(concat(empty, t)) == isempty(t)
-- [ ] isempty(concat(t, empty)) == isempty(t)
-- [ ] isempty(concat(t1, t2)) == isempty(t1) && isempty(t2)
-- [ ] isempty(empty) == true
-- [ ] isempty(!= empty) == false
+- [x] isempty(concat(empty, t)) == isempty(t)
+- [x] isempty(concat(t, empty)) == isempty(t)
+- [x] isempty(concat(t1, t2)) == isempty(t1) && isempty(t2)
+- [x] isempty(empty) == true
+- [x] isempty(!= empty) == false
+
+- [ ] toTree(l).toList() == l
