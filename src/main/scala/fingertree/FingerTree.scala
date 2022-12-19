@@ -478,8 +478,8 @@ sealed trait FingerTree[T]:
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
       case Single(_)       => ??? // not supposed to happen I think ?
-      case Deep(prefix, _, _) =>
-        prefix.headR(0) match {
+      case Deep(_, _, suffix) =>
+        suffix.headR(0) match {
           case Leaf(value) => Some(value)
           case _           => ??? // not supposed to happen I think ?
         }
@@ -647,22 +647,22 @@ sealed trait FingerTree[T]:
 
   def concatHeadL(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
     require(t1.isWellFormed && t2.isWellFormed)
-    t1.concat(t2).headL == t1.headL.orElse(t2.headL) because{
-      t1 match{
-      case Empty() => emptyConcatHeadL(t2)
-      case _ => t1.concat(t2).headL == t1.headL
+    t1.concat(t2).headL == t1.headL.orElse(t2.headL) because {
+      t1 match {
+        case Empty() => emptyConcatHeadL(t2)
+        case _       => t1.concat(t2).headL == t1.headL
+      }
     }
-    }  
   }.holds
 
   def concatHeadR(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
     require(t1.isWellFormed && t2.isWellFormed)
-    t1.concat(t2).headR == t2.headR.orElse(t1.headR) because{
-      t2 match{
-      case Empty() => emptyConcatHeadR(t1)
-      case _ => t1.concat(t2).headR == t2.headR
+    t1.concat(t2).headR == t2.headR.orElse(t1.headR) because {
+      t2 match {
+        case Empty() => emptyConcatHeadR(t1)
+        case _       => t1.concat(t2).headR == t2.headR
       }
-    }    
+    }
   }.holds
 
   def emptyConcatHeadL(t: FingerTree[T]): Boolean = {
@@ -685,7 +685,7 @@ sealed trait FingerTree[T]:
     require(t.isWellFormed)
     // not passed
     t.addR(value).headR == List(value).headOption
-  }.holds  
+  }.holds
 
   // tail //
   def tailL_law(t: FingerTree[T]): Boolean = {
@@ -704,7 +704,7 @@ sealed trait FingerTree[T]:
 
   // add //
   def addL_law(t: FingerTree[T], value: T): Boolean = {
-    require(t.isWellFormed)  
+    require(t.isWellFormed)
     t.addL(value).toListL().head == value
   }.holds
 

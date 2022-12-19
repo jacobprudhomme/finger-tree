@@ -43,3 +43,6 @@ bin/
 *.class
 
 .stainless-cache
+lib
+z3
+stainless*
