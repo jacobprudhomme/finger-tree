@@ -1,11 +1,11 @@
-- [ ] last(append(t, x)) == x
+- [x] last(append(t, x)) == x
 - [x] t.addL(x).headL == x
 
 - [x] tolist(append(t, x)).last ==  x
 - [x] tolist(prepend(t, x)).head == x
 - [ ] tolist(concat(t1, t2)) == tolist(t1) ++ tolist(t2)
 - [x] concat(t1, t2).headL == t1.headL.orElse(t2.headL)
-- [ ] concat(t1, t2).headR == t2.headR.orElse(t1.headR)
+- [x] concat(t1, t2).headR == t2.headR.orElse(t1.headR)
 
 - [x] headL(concat(empty, t2)) == headL(t2)
 - [x] headR(concat(t2, empty)) == headR(t2)

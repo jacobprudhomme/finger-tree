@@ -5,6 +5,19 @@ import stainless.collection._
 import stainless.proof._
 
 private sealed trait Node[T]:
+  def content(depth: BigInt): Set[T] = {
+    require(depth >= 0 && this.isWellFormed(depth))
+    this match {
+      case Leaf(a) => Set(a)
+      case Node2(left, right) =>
+        left.content(depth - 1) ++ right.content(depth - 1)
+      case Node3(left, middle, right) =>
+        left.content(depth - 1)
+          ++ middle.content(depth - 1)
+          ++ right.content(depth - 1)
+    }
+  }.ensuring(!_.isEmpty)
+
   def toListL(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
@@ -16,7 +29,7 @@ private sealed trait Node[T]:
           ++ middle.toListL(depth - 1)
           ++ right.toListL(depth - 1)
     }
-  }.ensuring(!_.isEmpty)
+  }.ensuring(_.content == content(depth))
 
   def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -114,6 +127,17 @@ private sealed trait Digit[T]:
     }
   }.ensuring(res => !res.isEmpty && res.forall(_.isWellFormed(depth)))
 
+  def content(depth: BigInt): Set[T] = {
+    require(depth >= 0 && this.isWellFormed(depth))
+    decreases(this)
+    this.tailL(depth) match {
+      case None() => this.headL(depth).content(depth)
+      case Some(tail) =>
+        this.headL(depth).content(depth)
+          ++ tail.content(depth)
+    }
+  }.ensuring(!_.isEmpty)
+
   def toListL(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     decreases(this)
@@ -123,7 +147,7 @@ private sealed trait Digit[T]:
         this.headL(depth).toListL(depth)
           ++ tail.toListL(depth)
     }
-  }.ensuring(!_.isEmpty)
+  }.ensuring(_.content == content(depth))
 
   def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -193,14 +217,33 @@ sealed trait FingerTree[T]:
       case Nil()      => Empty()
       case Cons(h, t) => toTreeL(t).addL(h)
     }
-  }.ensuring(_.isWellFormed)
+  }.ensuring(res => 
+  res.isWellFormed && res.content() == elems.content)
 
   def toTreeR[T](elems: List[T]): FingerTree[T] = {
     elems match {
       case Nil()      => Empty()
       case Cons(h, t) => toTreeR(t).addR(h)
     }
-  }.ensuring(_.isWellFormed)
+  }.ensuring(res => 
+  res.isWellFormed && res.content() == elems.content)
+
+  private def content(depth: BigInt): Set[T] = {
+    require(depth >= 0 && this.isWellFormed(depth))
+    this match {
+      case Empty() => Set.empty
+      case Single(a) => a.content(depth)
+      case Deep(prefix, spine, suffix) =>
+        prefix.content(depth)
+          ++ spine.content(depth + 1)
+          ++ suffix.content(depth)
+    }
+  }
+
+  def content(): Set[T] = {
+    require(this.isWellFormed)
+    this.content(0)
+  }
 
   private def toListL(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -212,12 +255,12 @@ sealed trait FingerTree[T]:
           ++ spine.toListL(depth + 1)
           ++ suffix.toListL(depth)
     }
-  }
+  }.ensuring(_.content == content(depth))
 
   def toListL(): List[T] = {
     require(this.isWellFormed)
     this.toListL(0)
-  }
+  }.ensuring(_.content == content())
 
   private def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -229,12 +272,12 @@ sealed trait FingerTree[T]:
           ++ spine.toListR(depth + 1)
           ++ prefix.toListR(depth)
     }
-  }
+  }.ensuring(_.content == content(depth))
 
   def toListR(): List[T] = {
     require(this.isWellFormed)
     this.toListR(0)
-  }
+  }.ensuring(_.content == content())
 
   /// INTERNAL HELPERS ///
 
@@ -470,7 +513,8 @@ sealed trait FingerTree[T]:
           case _           => ??? // not supposed to happen I think ?
         }
     }
-  }
+  }.ensuring(res => 
+  res == toListL().headOption)
 
   def headR: Option[T] = {
     require(this.isWellFormed)
@@ -484,7 +528,7 @@ sealed trait FingerTree[T]:
           case _           => ??? // not supposed to happen I think ?
         }
     }
-  }
+  }.ensuring(_ == toListR().headOption)
 
   def tailL: Option[FingerTree[T]] = {
     require(this.isWellFormed)
@@ -615,16 +659,39 @@ sealed trait FingerTree[T]:
   }.holds
 
   // toTree //
+  def toTreeLR(l: List[T]): Boolean = {
+    check(toTreeL(l).isWellFormed)
+    check(toTreeR(l).isWellFormed)
+    toTreeL(l).content() == toTreeR(l).content()
+  }.holds
+
   def toTree_toListL(l: List[T]): Boolean = {
     check(toTreeL(l).isWellFormed)
-    toTreeL(l).toListL() == l
+    toTreeL(l).toListL().content == l.content
   }.holds
 
   def toTree_toListR(l: List[T]): Boolean = {
-    toTreeR(l).toListR() == l
+    check(toTreeR(l).isWellFormed)
+    toTreeR(l).toListR().content == l.content
+  }.holds
+
+  // toList //
+  def toListLR(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
+    t.toListL().content == t.toListR().content
   }.holds
 
   // head //
+  def toListL_head(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
+    t.headL == t.toListL().headOption
+  }.holds
+
+  def toListLR_head(t: FingerTree[T]): Boolean = {
+    require(t.isWellFormed)
+    t.toListL().headOption == t.toListR().lastOption
+  }.holds
+
   def headL_ListL_head(t: FingerTree[T]): Boolean = {
     require(t.isWellFormed)
     t.headL == t.toListL().headOption
@@ -632,6 +699,7 @@ sealed trait FingerTree[T]:
 
   def headL_ListR_last(t: FingerTree[T]): Boolean = {
     require(t.isWellFormed)
+    toListLR(t)
     t.headL == t.toListR().lastOption
   }.holds
 
