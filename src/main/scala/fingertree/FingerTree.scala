@@ -217,21 +217,19 @@ sealed trait FingerTree[T]:
       case Nil()      => Empty()
       case Cons(h, t) => toTreeL(t).addL(h)
     }
-  }.ensuring(res => 
-  res.isWellFormed && res.content() == elems.content)
+  }.ensuring(res => res.isWellFormed && res.content() == elems.content)
 
   def toTreeR[T](elems: List[T]): FingerTree[T] = {
     elems match {
       case Nil()      => Empty()
       case Cons(h, t) => toTreeR(t).addR(h)
     }
-  }.ensuring(res => 
-  res.isWellFormed && res.content() == elems.content)
+  }.ensuring(res => res.isWellFormed && res.content() == elems.content)
 
   private def content(depth: BigInt): Set[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
-      case Empty() => Set.empty
+      case Empty()   => Set.empty
       case Single(a) => a.content(depth)
       case Deep(prefix, spine, suffix) =>
         prefix.content(depth)
@@ -354,38 +352,28 @@ sealed trait FingerTree[T]:
     this match {
       case Empty() => Single(value)
       case Single(existingValue) =>
-        Deep(
-          Digit1(value),
-          Empty(),
-          Digit1(existingValue)
-        )
+        Deep(Digit1(value), Empty(), Digit1(existingValue))
       case Deep(Digit1(a), spine, suffix) =>
-        Deep(
-          Digit2(value, a),
-          spine,
-          suffix
-        )
+        Deep(Digit2(value, a), spine, suffix)
       case Deep(Digit2(a, b), spine, suffix) =>
-        Deep(
-          Digit3(value, a, b),
-          spine,
-          suffix
-        )
+        Deep(Digit3(value, a, b), spine, suffix)
       case Deep(Digit3(a, b, c), spine, suffix) =>
-        Deep(
-          Digit4(value, a, b, c),
-          spine,
-          suffix
-        )
+        Deep(Digit4(value, a, b, c), spine, suffix)
       case Deep(Digit4(a, b, c, d), spine, suffix) =>
-        Deep(
-          Digit2(value, a),
-          spine.addL(Node3(b, c, d), depth + 1),
-          suffix
-        )
+        Deep(Digit2(value, a), spine.addL(Node3(b, c, d), depth + 1), suffix)
     }
   }.ensuring(res =>
-  res.isWellFormed(depth) && (res.content() == toListL().content ++ value.toListL(depth).content))
+    res.isWellFormed(depth)
+      && res.content(depth) == this.content(depth) ++ value.content(depth)
+  )
+
+  private def content(elems: List[Node[T]], depth: BigInt): Set[T] = {
+    require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
+    elems match {
+      case Cons(h, t) => content(t, depth) ++ h.content(depth)
+      case Nil()      => Set[T]()
+    }
+  }
 
   // preprends the list to the tree
   private def addL(elems: List[Node[T]], depth: BigInt): FingerTree[T] = {
@@ -398,50 +386,38 @@ sealed trait FingerTree[T]:
       case Nil()      => this
       case Cons(h, t) => this.addL(t, depth).addL(h, depth)
     }
-  }.ensuring(_.isWellFormed(depth))
+  }.ensuring(res =>
+    res.isWellFormed(depth)
+      && res.content(depth) == this.content(depth) ++ content(elems, depth)
+  )
 
   def addL(value: T): FingerTree[T] = {
     require(this.isWellFormed)
     this.addL(Leaf(value), 0)
-  }.ensuring(res => 
-  res.isWellFormed(0)&& (res.content() == toListL().content + value))
+  }.ensuring(res =>
+    res.isWellFormed(0)
+      && res.content() == this.content() + value
+  )
 
   private def addR(value: Node[T], depth: BigInt): FingerTree[T] = {
     require(depth >= 0 && this.isWellFormed(depth) && value.isWellFormed(depth))
     this match {
       case Empty() => Single(value)
       case Single(existingValue) =>
-        Deep(
-          Digit1(existingValue),
-          Empty(),
-          Digit1(value)
-        )
+        Deep(Digit1(existingValue), Empty(), Digit1(value))
       case Deep(prefix, spine, Digit1(a)) =>
-        Deep(
-          prefix,
-          spine,
-          Digit2(a, value)
-        )
+        Deep(prefix, spine, Digit2(a, value))
       case Deep(prefix, spine, Digit2(a, b)) =>
-        Deep(
-          prefix,
-          spine,
-          Digit3(a, b, value)
-        )
+        Deep(prefix, spine, Digit3(a, b, value))
       case Deep(prefix, spine, Digit3(a, b, c)) =>
-        Deep(
-          prefix,
-          spine,
-          Digit4(a, b, c, value)
-        )
+        Deep(prefix, spine, Digit4(a, b, c, value))
       case Deep(prefix, spine, Digit4(a, b, c, d)) =>
-        Deep(
-          prefix,
-          spine.addR(Node3(a, b, c), depth + 1),
-          Digit2(d, value)
-        )
+        Deep(prefix, spine.addR(Node3(a, b, c), depth + 1), Digit2(d, value))
     }
-  }.ensuring(_.isWellFormed(depth))
+  }.ensuring(res =>
+    res.isWellFormed(depth)
+      && res.content(depth) == this.content(depth) ++ value.content(depth)
+  )
 
   // appends the list to the tree
   private def addR(elems: List[Node[T]], depth: BigInt): FingerTree[T] = {
@@ -454,12 +430,19 @@ sealed trait FingerTree[T]:
       case Nil()      => this
       case Cons(h, t) => this.addR(h, depth).addR(t, depth)
     }
-  }.ensuring(_.isWellFormed(depth))
+  }.ensuring(res =>
+    res.isWellFormed(depth)
+      && res.content(depth) == this.content(depth) ++ content(elems, depth)
+  )
 
   def addR(value: T): FingerTree[T] = {
     require(this.isWellFormed)
-    this.addR(Leaf(value), 0)
-  }.ensuring(_.isWellFormed)
+    check(Leaf[T](value).content(0) == Set[T](value))
+    this.addR(Leaf[T](value), 0)
+  }.ensuring(res =>
+    res.isWellFormed
+      && res.content() == this.content() + value
+  )
 
   def viewL: View[T] = {
     require(this.isWellFormed)
@@ -515,8 +498,7 @@ sealed trait FingerTree[T]:
           case _           => ??? // not supposed to happen I think ?
         }
     }
-  }.ensuring(res => 
-  res == toListL().headOption)
+  }.ensuring(res => res == toListL().headOption)
 
   def headR: Option[T] = {
     require(this.isWellFormed)
