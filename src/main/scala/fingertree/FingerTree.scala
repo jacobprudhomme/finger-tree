@@ -714,9 +714,38 @@ sealed trait FingerTree[T]:
   }.holds
 
   // concat //
+  def concat_listL_help(
+      tree1: FingerTree[T],
+      elems: List[Node[T]],
+      tree2: FingerTree[T],
+      depth: BigInt
+  ): Boolean = {
+    require(
+      depth >= 0
+        && tree1.isWellFormed(depth)
+        && tree2.isWellFormed(depth)
+        && elems.forall(_.isWellFormed(depth))
+    )
+
+    concat(tree1, elems, tree2, depth).toListL(depth) ==
+      tree1.toListL(depth)
+      ++ elems.flatMap(_.toListL(depth))
+      ++ tree2.toListL(depth)
+  }.holds
+
   def concat_listL(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
     require(t1.isWellFormed && t2.isWellFormed)
-    t1.concat(t2).toListL() == t1.toListL() ++ t2.toListL()
+    t1.concat(t2).toListL() == t1.toListL() ++ t2.toListL() because {
+      (t1, t2) match {
+        case (Empty(), _)             => t1.toListL().isEmpty
+        case (_, Empty())             => t2.toListL().isEmpty
+        case (Single(Leaf(value)), _) => addL_law(t2, value)
+        case (_, Single(Leaf(value))) => addR_law(t1, value)
+        case (Deep(prefix1, spine1, suffix1), Deep(prefix2, spine2, suffix2)) =>
+          ???
+        case _ => ???
+      }
+    }
   }.holds
 
   def concat_listR(t1: FingerTree[T], t2: FingerTree[T]): Boolean = {
