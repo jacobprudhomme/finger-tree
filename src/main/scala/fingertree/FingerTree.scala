@@ -42,7 +42,7 @@ private sealed trait Node[T]:
           ++ middle.toListR(depth - 1)
           ++ left.toListR(depth - 1)
     }
-  }.ensuring(!_.isEmpty)
+  }.ensuring(_.content == content(depth))
 
   def toDigit(depth: BigInt): Digit[T] = {
     require(depth >= 1 && this.isWellFormed(depth))
@@ -158,7 +158,7 @@ private sealed trait Digit[T]:
         this.headR(depth).toListR(depth)
           ++ tail.toListR(depth)
     }
-  }.ensuring(!_.isEmpty)
+  }.ensuring(_.content == content(depth))
 
   def toTree(depth: BigInt): FingerTree[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -384,7 +384,8 @@ sealed trait FingerTree[T]:
           suffix
         )
     }
-  }.ensuring(_.isWellFormed(depth))
+  }.ensuring(res =>
+  res.isWellFormed(depth) && (res.content() == toListL().content ++ value.toListL(depth).content))
 
   // preprends the list to the tree
   private def addL(elems: List[Node[T]], depth: BigInt): FingerTree[T] = {
@@ -402,7 +403,8 @@ sealed trait FingerTree[T]:
   def addL(value: T): FingerTree[T] = {
     require(this.isWellFormed)
     this.addL(Leaf(value), 0)
-  }.ensuring(_.isWellFormed)
+  }.ensuring(res => 
+  res.isWellFormed(0)&& (res.content() == toListL().content + value))
 
   private def addR(value: Node[T], depth: BigInt): FingerTree[T] = {
     require(depth >= 0 && this.isWellFormed(depth) && value.isWellFormed(depth))
