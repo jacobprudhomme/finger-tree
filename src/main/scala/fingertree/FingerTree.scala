@@ -637,14 +637,12 @@ sealed trait FingerTree[T]:
 
   def addLHeadL(t: FingerTree[T], value: T): Boolean = {
     require(t.isWellFormed)
-    // not sure, this looks weird but stainless passed
-    t.addL(value).headL == List(value).headOption
+    t.addL(value).headL.get == value
   }.holds
 
   def addRHeadR(t: FingerTree[T], value: T): Boolean = {
     require(t.isWellFormed)
-    // not passed
-    t.addR(value).headR == List(value).headOption
+    t.addR(value).headR.get == value
   }.holds
 
   // tail //
