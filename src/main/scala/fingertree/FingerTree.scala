@@ -16,7 +16,9 @@ case class Digit4[T](a: T, b: T, c: T, d: T)
 sealed trait FingerTree[T]
 case class Empty[T]()
 case class Single[T](value: T)
-case class Deep[T](prefix: Digit[T], spine: FingerTree[Node[T]], suffix: Digit[T])
+case class Deep[T](
+  prefix: Digit[T], spine: FingerTree[Node[T]], suffix: Digit[T]
+)
 
 sealed trait View[T]
 case class NilV[T]()
