@@ -18,7 +18,9 @@ case class Digit4[T](a: Node[T], b: Node[T], c: Node[T], d: Node[T])
 sealed trait FingerTree[T]
 case class Empty[T]()
 case class Single[T](value: Node[T])
-case class Deep[T](prefix: Digit[T], spine: FingerTree[T], suffix: Digit[T])
+case class Deep[T](
+  prefix: Digit[T], spine: FingerTree[T], suffix: Digit[T]
+)
 
 def isWellFormed(depth: BigInt): Boolean = {
   require(depth >= 0)
