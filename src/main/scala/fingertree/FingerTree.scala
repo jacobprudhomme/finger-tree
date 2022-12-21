@@ -519,9 +519,9 @@ sealed trait FingerTree[T]:
     decreases(tree1)
     (tree1, tree2) match {
       case (Empty(), _)   => tree2.addL(elems, depth)
-      case (Single(e), _) => tree2.addL(e, depth).addL(elems, depth)
+      case (Single(e), _) => tree2.addL(elems, depth).addL(e, depth)
       case (_, Empty())   => tree1.addR(elems, depth)
-      case (_, Single(e)) => tree1.addR(e, depth).addR(elems, depth)
+      case (_, Single(e)) => tree1.addR(elems, depth).addR(e, depth)
       case (Deep(prefix1, spine1, suffix1), Deep(prefix2, spine2, suffix2)) =>
         val elemsTree1 = suffix1.toNodeList(depth)
         val elemsTree2 = prefix1.toNodeList(depth)
