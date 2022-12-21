@@ -3,28 +3,24 @@ package fingertree
 import stainless.collection.{List, Cons, Nil}
 import stainless.lang.{Option, Some, None}
 
-private sealed trait Node[T]
-private final case class Node2[T](a: T, b: T) extends Node[T]
-private final case class Node3[T](a: T, b: T, c: T) extends Node[T]
+sealed trait Node[T]
+case class Node2[T](a: T, b: T)
+case class Node3[T](a: T, b: T, c: T)
 
-private sealed trait Digit[T]
-private final case class Digit1[T](a: T) extends Digit[T]
-private final case class Digit2[T](a: T, b: T) extends Digit[T]
-private final case class Digit3[T](a: T, b: T, c: T) extends Digit[T]
-private final case class Digit4[T](a: T, b: T, c: T, d: T) extends Digit[T]
+sealed trait Digit[T]
+case class Digit1[T](a: T)
+case class Digit2[T](a: T, b: T)
+case class Digit3[T](a: T, b: T, c: T)
+case class Digit4[T](a: T, b: T, c: T, d: T)
 
 sealed trait FingerTree[T]
-final case class Empty[T]() extends FingerTree[T]
-final case class Single[T](value: T) extends FingerTree[T]
-final case class Deep[T](
-    prefix: Digit[T],
-    spine: FingerTree[Node[T]],
-    suffix: Digit[T]
-) extends FingerTree[T]
+case class Empty[T]()
+case class Single[T](value: T)
+case class Deep[T](prefix: Digit[T], spine: FingerTree[Node[T]], suffix: Digit[T])
 
 sealed trait View[T]
-final case class NilV[T]() extends View[T]
-final case class ConsV[T](value: T, rest: FingerTree[T]) extends View[T]
+case class NilV[T]()
+case class ConsV[T](value: T, rest: FingerTree[T])
 
 object FingerTree {
   /// INTERNAL HELPERS ///
