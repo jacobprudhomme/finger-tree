@@ -4,35 +4,21 @@ import stainless.lang._
 import stainless.collection._
 import stainless.proof._
 
-private sealed trait Node[T]
-private final case class Leaf[T](a: T) extends Node[T]
-private final case class Node2[T](left: Node[T], right: Node[T]) extends Node[T]
-private final case class Node3[T](
-    left: Node[T],
-    middle: Node[T],
-    right: Node[T]
-) extends Node[T]
+sealed trait Node[T]
+case class Leaf[T](a: T)
+case class Node2[T](left: Node[T], right: Node[T])
+case class Node3[T](left: Node[T], middle: Node[T], right: Node[T])
 
-private sealed trait Digit[T]
-private final case class Digit1[T](a: Node[T]) extends Digit[T]
-private final case class Digit2[T](
-  a: Node[T], b: Node[T]
-) extends Digit[T]
-private final case class Digit3[T](
-    a: Node[T], b: Node[T], c: Node[T]
-) extends Digit[T]
-private final case class Digit4[T](
-    a: Node[T], b: Node[T], c: Node[T], d: Node[T]
-) extends Digit[T]
+sealed trait Digit[T]
+case class Digit1[T](a: Node[T])
+case class Digit2[T](a: Node[T], b: Node[T])
+case class Digit3[T](a: Node[T], b: Node[T], c: Node[T])
+case class Digit4[T](a: Node[T], b: Node[T], c: Node[T], d: Node[T])
 
 sealed trait FingerTree[T]
-final case class Empty[T]() extends FingerTree[T]
-final case class Single[T](value: Node[T]) extends FingerTree[T]
-final case class Deep[T](
-    prefix: Digit[T],
-    spine: FingerTree[T],
-    suffix: Digit[T]
-) extends FingerTree[T]
+case class Empty[T]()
+case class Single[T](value: Node[T])
+case class Deep[T](prefix: Digit[T], spine: FingerTree[T], suffix: Digit[T])
 
 def isWellFormed(depth: BigInt): Boolean = {
   require(depth >= 0)
