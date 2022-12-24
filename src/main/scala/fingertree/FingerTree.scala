@@ -352,9 +352,9 @@ sealed trait FingerTree[T]:
           case Some(suff) => suff.toListR(depth)
           case None()     => List()
         }
-        res.toListR(depth) == prefix.toListR(depth)
+        res.toListR(depth) == suffix
           ++ spine.toListR(depth + 1)
-          ++ suffix
+          ++ prefix.toListR(depth)
       }
   )
 
