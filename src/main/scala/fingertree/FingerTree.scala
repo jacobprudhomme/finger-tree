@@ -677,7 +677,12 @@ object Utils {
       l2: List[T],
       l3: List[T]
   ): Boolean = {
-    (l1 ++ l2) ++ l3 == l1 ++ (l2 ++ l3)
+    (l1 ++ l2) ++ l3 == l1 ++ (l2 ++ l3) because {
+      l1 match {
+        case Nil()      => (Nil() ++ l2) ++ l3 == Nil() ++ (l2 ++ l3)
+        case Cons(h, t) => associativeConcat(t, l2, l3)
+      }
+    }
   }.holds
 
   def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
