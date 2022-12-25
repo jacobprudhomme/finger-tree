@@ -487,7 +487,7 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()             => NilV()
       case Single(Leaf(value)) => ConsV(value, Empty())
-      case Single(_)           => ??? // not supposed to happen I think ?
+      case Single(_)           => ???
       case Deep(prefix, spine, suffix) =>
         prefix.headL(0) match {
           case Leaf(value) =>
@@ -495,12 +495,16 @@ sealed trait FingerTree[T]:
               value,
               deepL(prefix.tailL(0), spine, suffix, 0)
             )
-          case _ => ??? // not supposed to happen I think ?
+          case _ => ???
         }
     }
   }.ensuring {
-    case NilV()         => true
-    case ConsV(_, rest) => rest.isWellFormed
+    case NilV() => true
+    case ConsV(head, rest) =>
+      rest.isWellFormed
+      && head == this.toListL().head
+      && head == this.toListR().last
+      && rest.toListL() == this.toListL().tail
   }
 
   def viewR: View[T] = {
@@ -508,7 +512,7 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()             => NilV()
       case Single(Leaf(value)) => ConsV(value, Empty())
-      case Single(_)           => ??? // not supposed to happen I think ?
+      case Single(_)           => ???
       case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) =>
@@ -516,12 +520,16 @@ sealed trait FingerTree[T]:
               value,
               deepR(prefix, spine, suffix.tailR(0), 0)
             )
-          case _ => ??? // not supposed to happen I think ?
+          case _ => ???
         }
     }
   }.ensuring {
-    case NilV()         => true
-    case ConsV(_, rest) => rest.isWellFormed
+    case NilV() => true
+    case ConsV(head, rest) =>
+      rest.isWellFormed
+      && head == this.toListR().head
+      && head == this.toListL().last
+      && rest.toListR() == this.toListR().tail
   }
 
   def headL: Option[T] = {
@@ -529,11 +537,11 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
-      case Single(_)       => ??? // not supposed to happen I think ?
+      case Single(_)       => ???
       case Deep(prefix, _, _) =>
         prefix.headL(0) match {
           case Leaf(value) => Some(value)
-          case _           => ??? // not supposed to happen I think ?
+          case _           => ???
         }
     }
   }.ensuring(res =>
@@ -546,11 +554,11 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
-      case Single(_)       => ??? // not supposed to happen I think ?
+      case Single(_)       => ???
       case Deep(_, _, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) => Some(value)
-          case _           => ??? // not supposed to happen I think ?
+          case _           => ???
         }
     }
   }.ensuring(res =>
@@ -561,24 +569,32 @@ sealed trait FingerTree[T]:
   def tailL: Option[FingerTree[T]] = {
     require(this.isWellFormed)
     this.viewL match {
-      case ConsV(_, rest) => Some(rest)
-      case NilV()         => None()
+      case ConsV(_, rest) =>
+        check(!this.isEmpty)
+        Some(rest)
+      case NilV() => None()
     }
-  }.ensuring(res =>
-    res.forall(_.isWellFormed)
-    // && res == this.toListL().tailOption
-  )
+  }.ensuring {
+    case None() => true
+    case Some(rest) =>
+      rest.isWellFormed
+      && rest.toListL() == this.toListL().tail
+  }
 
   def tailR: Option[FingerTree[T]] = {
     require(this.isWellFormed)
     this.viewR match {
-      case ConsV(_, rest) => Some(rest)
-      case NilV()         => None()
+      case ConsV(_, rest) =>
+        check(!this.isEmpty)
+        Some(rest)
+      case NilV() => None()
     }
-  }.ensuring(res =>
-    res.forall(_.isWellFormed)
-    // && res == this.toListR().tailOption
-  )
+  }.ensuring {
+    case None() => true
+    case Some(rest) =>
+      rest.isWellFormed
+      && rest.toListR() == this.toListR().tail
+  }
 
   def isEmpty: Boolean = {
     require(this.isWellFormed)
