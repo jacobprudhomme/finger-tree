@@ -91,7 +91,7 @@ private sealed trait Digit[T]:
     }
   }.ensuring(res =>
     res.isWellFormed(depth)
-    // && res == this.toNodeList(depth).last
+      && res == this.toNodeList(depth).last
   )
 
   def tailL(depth: BigInt): Option[Digit[T]] = {
@@ -134,40 +134,75 @@ private sealed trait Digit[T]:
       case None()     => List(this.headL(depth))
       case Some(tail) => Cons(this.headL(depth), tail.toNodeList(depth))
     }
-  }.ensuring(res => !res.isEmpty && res.forall(_.isWellFormed(depth)))
+  }.ensuring(res =>
+    !res.isEmpty
+      && res.forall(_.isWellFormed(depth))
+      && res == (this match {
+        case Digit1(a)          => List[Node[T]](a)
+        case Digit2(a, b)       => List[Node[T]](a, b)
+        case Digit3(a, b, c)    => List[Node[T]](a, b, c)
+        case Digit4(a, b, c, d) => List[Node[T]](a, b, c, d)
+      })
+  )
 
   def toListL(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
-    decreases(this)
-    this.tailL(depth) match {
-      case None() => this.headL(depth).toListL(depth)
-      case Some(tail) =>
-        this.headL(depth).toListL(depth)
-          ++ tail.toListL(depth)
+    this match {
+      case Digit1(a)    => a.toListL(depth)
+      case Digit2(a, b) => a.toListL(depth) ++ b.toListL(depth)
+      case Digit3(a, b, c) =>
+        a.toListL(depth) ++ b.toListL(depth)
+          ++ c.toListL(depth)
+      case Digit4(a, b, c, d) =>
+        a.toListL(depth) ++ b.toListL(depth)
+          ++ c.toListL(depth) ++ d.toListL(depth)
     }
   }.ensuring(!_.isEmpty)
 
   def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
-    decreases(this)
-    this.tailR(depth) match {
-      case None() => this.headR(depth).toListR(depth)
-      case Some(tail) =>
-        this.headR(depth).toListR(depth)
-          ++ tail.toListR(depth)
+    this match {
+      case Digit1(a)    => a.toListR(depth)
+      case Digit2(a, b) => b.toListR(depth) ++ a.toListR(depth)
+      case Digit3(a, b, c) =>
+        c.toListR(depth) ++ b.toListR(depth)
+          ++ a.toListR(depth)
+      case Digit4(a, b, c, d) =>
+        d.toListR(depth) ++ c.toListR(depth)
+          ++ b.toListR(depth) ++ a.toListR(depth)
     }
   }.ensuring(!_.isEmpty)
 
   def toTree(depth: BigInt): FingerTree[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
-      case Digit1(a)          => Single(a)
-      case Digit2(a, b)       => Deep(Digit1(a), Empty(), Digit1(b))
-      case Digit3(a, b, c)    => Deep(Digit2(a, b), Empty(), Digit1(c))
-      case Digit4(a, b, c, d) => Deep(Digit2(a, b), Empty(), Digit2(c, d))
+      case Digit1(a)    => Single(a)
+      case Digit2(a, b) => Deep(Digit1(a), Empty(), Digit1(b))
+      case Digit3(a, b, c) =>
+        Utils.associativeConcat(
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
+        Deep(Digit2(a, b), Empty(), Digit1(c))
+      case Digit4(a, b, c, d) =>
+        Utils.associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth),
+          d.toListL(depth)
+        )
+        Utils.associativeConcat(
+          d.toListR(depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
+        Deep(Digit2(a, b), Empty(), Digit2(c, d))
     }
   }.ensuring(res =>
     res.isWellFormed(depth)
+      && !res.isEmpty(depth)
       && res.toListL(depth) == this.toListL(depth)
       && res.toListR(depth) == this.toListR(depth)
   )
@@ -498,14 +533,17 @@ sealed trait FingerTree[T]:
           case _ => ???
         }
     }
-  }.ensuring {
-    case NilV() => true
-    case ConsV(head, rest) =>
-      rest.isWellFormed
-      && head == this.toListL().head
-      && head == this.toListR().last
-      && rest.toListL() == this.toListL().tail
-  }
+  }.ensuring(res =>
+    res.isEmpty == this.isEmpty
+      && (res match {
+        case NilV() => true
+        case ConsV(head, rest) =>
+          rest.isWellFormed
+          && head == this.toListL().head
+          && head == this.toListR().last
+          && rest.toListL() == this.toListL().tail
+      })
+  )
 
   def viewR: View[T] = {
     require(this.isWellFormed)
@@ -523,29 +561,42 @@ sealed trait FingerTree[T]:
           case _ => ???
         }
     }
-  }.ensuring {
-    case NilV() => true
-    case ConsV(head, rest) =>
-      rest.isWellFormed
-      && head == this.toListR().head
-      && head == this.toListL().last
-      && rest.toListR() == this.toListR().tail
-  }
+  }.ensuring(res =>
+    res.isEmpty == this.isEmpty
+      && (res match {
+        case NilV() => true
+        case ConsV(head, rest) =>
+          rest.isWellFormed
+          && head == this.toListR().head
+          && head == this.toListL().last
+          && rest.toListR() == this.toListR().tail
+      })
+  )
 
   def headL: Option[T] = {
     require(this.isWellFormed)
     this match {
-      case Empty()         => None()
+      case Empty()         => None[T]()
       case Single(Leaf(e)) => Some(e)
       case Single(_)       => ???
-      case Deep(prefix, _, _) =>
+      case Deep(prefix, spine, suffix) =>
         prefix.headL(0) match {
-          case Leaf(value) => Some(value)
-          case _           => ???
+          case Leaf(value) =>
+            Utils.lastConcat(
+              suffix.toListR(0) ++ spine.toListR(1),
+              prefix.toListR(0)
+            )
+            Utils.lastConcat(
+              prefix.toListL(0) ++ spine.toListL(1),
+              suffix.toListL(0)
+            )
+            Some(value)
+          case _ => ???
         }
     }
   }.ensuring(res =>
-    res == this.toListL().headOption
+    res.isDefined != this.isEmpty
+      && res == this.toListL().headOption
       && res == this.toListR().lastOption
   )
 
@@ -555,14 +606,24 @@ sealed trait FingerTree[T]:
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
       case Single(_)       => ???
-      case Deep(_, _, suffix) =>
+      case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
-          case Leaf(value) => Some(value)
-          case _           => ???
+          case Leaf(value) =>
+            Utils.lastConcat(
+              suffix.toListR(0) ++ spine.toListR(1),
+              prefix.toListR(0)
+            )
+            Utils.lastConcat(
+              prefix.toListL(0) ++ spine.toListL(1),
+              suffix.toListL(0)
+            )
+            Some(value)
+          case _ => ???
         }
     }
   }.ensuring(res =>
-    res == this.toListR().headOption
+    res.isDefined != this.isEmpty
+      && res == this.toListR().headOption
       && res == this.toListL().lastOption
   )
 
@@ -574,12 +635,15 @@ sealed trait FingerTree[T]:
         Some(rest)
       case NilV() => None()
     }
-  }.ensuring {
-    case None() => true
-    case Some(rest) =>
-      rest.isWellFormed
-      && rest.toListL() == this.toListL().tail
-  }
+  }.ensuring(res =>
+    res.isDefined != this.isEmpty
+      && (res match {
+        case None() => true
+        case Some(rest) =>
+          rest.isWellFormed
+          && rest.toListL() == this.toListL().tail
+      })
+  )
 
   def tailR: Option[FingerTree[T]] = {
     require(this.isWellFormed)
@@ -589,19 +653,30 @@ sealed trait FingerTree[T]:
         Some(rest)
       case NilV() => None()
     }
-  }.ensuring {
-    case None() => true
-    case Some(rest) =>
-      rest.isWellFormed
-      && rest.toListR() == this.toListR().tail
-  }
+  }.ensuring(res =>
+    res.isDefined != this.isEmpty
+      && (res match {
+        case None() => true
+        case Some(rest) =>
+          rest.isWellFormed
+          && rest.toListR() == this.toListR().tail
+      })
+  )
 
-  def isEmpty: Boolean = {
-    require(this.isWellFormed)
+  def isEmpty(depth: BigInt): Boolean = {
+    require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Empty() => true
       case _       => false
     }
+  }.ensuring(res =>
+    res == this.toListL(depth).isEmpty
+      && res == this.toListR(depth).isEmpty
+  )
+
+  def isEmpty: Boolean = {
+    require(this.isWellFormed)
+    this.isEmpty(0)
   }.ensuring(res =>
     res == this.toListL().isEmpty
       && res == this.toListR().isEmpty
@@ -701,6 +776,22 @@ object Utils {
     }
   }.holds
 
+  def associativeConcat[T](
+      l1: List[T],
+      l2: List[T],
+      l3: List[T],
+      l4: List[T]
+  ): Boolean = {
+    val res = (l1 ++ l2) ++ (l3 ++ l4)
+    res == l1 ++ l2 ++ l3 ++ l4
+    && res == l1 ++ (l2 ++ (l3 ++ l4)) because {
+      l1 match {
+        case Nil()      => associativeConcat(l2, l3, l4)
+        case Cons(h, t) => associativeConcat(t, l2, l3, l4)
+      }
+    }
+  }.holds
+
   def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
     require(
       depth >= 0
@@ -738,6 +829,20 @@ object Utils {
     }
   }.holds
 
+  def lastConcat[T](l1: List[T], l2: List[T]): Boolean = {
+    require(!l2.isEmpty)
+    (l1 ++ l2).lastOption == l2.lastOption because {
+      l1 match {
+        case Nil()      => l1 ++ l2 == l2
+        case Cons(h, t) => lastConcat(t, l2)
+      }
+    }
+  }.holds
+
+  def headConcat[T](l1: List[T], l2: List[T]): Boolean = {
+    require(!l1.isEmpty)
+    (l1 ++ l2).head == l1.head
+  }.holds
 }
 
 final case class Empty[T]() extends FingerTree[T]
