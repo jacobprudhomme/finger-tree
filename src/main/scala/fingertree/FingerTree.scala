@@ -484,7 +484,6 @@ sealed trait FingerTree[T]:
           d.toListL(depth),
           spine.toListL(depth + 1)
         )
-
         Utils.associativeConcat(
           suffix.toListR(depth),
           spine.toListR(depth + 1),
@@ -496,7 +495,6 @@ sealed trait FingerTree[T]:
           a.toListR(depth),
           value.toListR(depth)
         )
-
         Deep(Digit2(value, a), spine.addL(Node3(b, c, d), depth + 1), suffix)
     }
   }.ensuring(res =>
@@ -552,12 +550,99 @@ sealed trait FingerTree[T]:
       case Single(existingValue) =>
         Deep(Digit1(existingValue), Empty(), Digit1(value))
       case Deep(prefix, spine, Digit1(a)) =>
+        Utils.associativeConcat(
+          value.toListR(depth),
+          a.toListR(depth),
+          spine.toListR(depth + 1),
+          prefix.toListR(depth)
+        )
+        Utils.associativeConcat(
+          prefix.toListL(depth) ++ spine.toListL(depth + 1),
+          a.toListL(depth),
+          value.toListL(depth)
+        )
         Deep(prefix, spine, Digit2(a, value))
       case Deep(prefix, spine, Digit2(a, b)) =>
+        Utils.associativeConcat(
+          value.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth),
+          spine.toListR(depth + 1)
+        )
+        Utils.associativeConcat(
+          value.toListR(depth),
+          b.toListR(depth) ++ a.toListR(depth) ++ spine.toListR(depth + 1),
+          prefix.toListR(depth)
+        )
+        Utils.associativeConcat(
+          prefix.toListL(depth) ++ spine.toListL(depth + 1),
+          a.toListL(depth),
+          b.toListL(depth),
+          value.toListL(depth)
+        )
         Deep(prefix, spine, Digit3(a, b, value))
       case Deep(prefix, spine, Digit3(a, b, c)) =>
+        Utils.associativeConcat(
+          value.toListR(depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
+        Utils.associativeConcat(
+          value.toListR(depth),
+          c.toListR(depth) ++ b.toListR(depth) ++ a.toListR(depth),
+          spine.toListR(depth + 1),
+          prefix.toListR(depth)
+        )
+        Utils.associativeConcat(
+          prefix.toListL(depth) ++ spine.toListL(depth + 1),
+          a.toListL(depth) ++ b.toListL(depth) ++ c.toListL(depth),
+          value.toListL(depth)
+        )
+        Utils.associativeConcat(
+          prefix.toListL(depth) ++ spine.toListL(depth + 1),
+          a.toListL(depth) ++ b.toListL(depth),
+          c.toListL(depth),
+          value.toListL(depth)
+        )
         Deep(prefix, spine, Digit4(a, b, c, value))
       case Deep(prefix, spine, Digit4(a, b, c, d)) =>
+        Utils.associativeConcat(
+          value.toListR(depth),
+          d.toListR(depth) ++ c.toListR(depth) ++ b.toListR(depth)
+            ++ a.toListR(depth),
+          spine.toListR(depth + 1),
+          prefix.toListR(depth)
+        )
+        Utils.associativeConcat(
+          value.toListR(depth),
+          d.toListR(depth) ++ c.toListR(depth) ++ b.toListR(depth),
+          a.toListR(depth),
+          spine.toListR(depth + 1)
+        )
+        Utils.associativeConcat(
+          value.toListR(depth),
+          d.toListR(depth),
+          c.toListR(depth),
+          b.toListR(depth)
+        )
+        Utils.associativeConcat(
+          value.toListR(depth) ++ d.toListR(depth),
+          c.toListR(depth) ++ b.toListR(depth),
+          a.toListR(depth),
+          spine.toListR(depth + 1)
+        )
+        Utils.associativeConcat(
+          prefix.toListL(depth),
+          spine.toListL(depth + 1),
+          a.toListL(depth) ++ b.toListL(depth) ++ c.toListL(depth)
+        )
+        Utils.associativeConcat(
+          prefix.toListL(depth) ++ spine.toListL(depth + 1),
+          a.toListL(depth) ++ b.toListL(depth) ++ c.toListL(depth),
+          d.toListL(depth),
+          value.toListL(depth)
+        )
         Deep(prefix, spine.addR(Node3(a, b, c), depth + 1), Digit2(d, value))
     }
   }.ensuring(res =>
