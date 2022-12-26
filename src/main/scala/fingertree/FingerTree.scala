@@ -143,6 +143,8 @@ private sealed trait Digit[T]:
         case Digit3(a, b, c)    => List[Node[T]](a, b, c)
         case Digit4(a, b, c, d) => List[Node[T]](a, b, c, d)
       })
+      && Utils.toListL(res, depth) == this.toListL(depth)
+      && Utils.toListR(res, depth) == this.toListR(depth)
   )
 
   def toListL(depth: BigInt): List[T] = {
@@ -890,30 +892,83 @@ sealed trait FingerTree[T]:
         tree1.addR(elems, depth).addR(e, depth)
       case (Deep(prefix1, spine1, suffix1), Deep(prefix2, spine2, suffix2)) =>
         val elemsTree1 = suffix1.toNodeList(depth)
-        val elemsTree2 = prefix1.toNodeList(depth)
+        val elemsTree2 = prefix2.toNodeList(depth)
         Utils.forallConcat(elemsTree1, elems, _.isWellFormed(depth))
         Utils.forallConcat(
           elemsTree1 ++ elems,
           elemsTree2,
           _.isWellFormed(depth)
         )
+
+        Utils.associativeToListL(elemsTree1, elems, depth)
+        Utils.associativeToListL(elemsTree1 ++ elems, elemsTree2, depth)
+        Utils.associativeConcat(
+          prefix1.toListL(depth),
+          spine1.toListL(depth + 1),
+          suffix1.toListL(depth) ++ Utils.toListL(elems, depth)
+            ++ prefix2.toListL(depth),
+          spine2.toListL(depth + 1)
+        )
+        Utils.associativeConcat(
+          prefix1.toListL(depth) ++ spine1.toListL(depth + 1),
+          suffix1.toListL(depth),
+          Utils.toListL(elems, depth),
+          prefix2.toListL(depth)
+        )
+        Utils.associativeConcat(
+          prefix1.toListL(depth) ++ spine1.toListL(depth + 1)
+            ++ suffix1.toListL(depth),
+          Utils.toListL(elems, depth),
+          prefix2.toListL(depth),
+          spine2.toListL(depth + 1)
+        )
+        Utils.associativeConcat(
+          prefix1.toListL(depth) ++ spine1.toListL(depth + 1)
+            ++ suffix1.toListL(depth),
+          Utils.toListL(elems, depth),
+          prefix2.toListL(depth) ++ spine2.toListL(depth + 1),
+          suffix2.toListL(depth)
+        )
+
+        Utils.associativeToListR(elemsTree1, elems, depth)
+        Utils.associativeToListR(elemsTree1 ++ elems, elemsTree2, depth)
+        Utils.associativeConcat(
+          Utils.toListR(elemsTree2, depth),
+          Utils.toListR(elems, depth),
+          Utils.toListR(elemsTree1, depth)
+        )
+
+        Utils.associativeConcat(
+          suffix2.toListR(depth),
+          spine2.toListR(depth + 1),
+          prefix2.toListR(depth) ++ Utils.toListR(elems, depth)
+            ++ suffix1.toListR(depth),
+          spine1.toListR(depth + 1)
+        )
+        Utils.associativeConcat(
+          suffix2.toListR(depth) ++ spine2.toListR(depth + 1),
+          prefix2.toListR(depth),
+          Utils.toListR(elems, depth),
+          suffix1.toListR(depth)
+        )
+        Utils.associativeConcat(
+          suffix2.toListR(depth) ++ spine2.toListR(depth + 1)
+            ++ prefix2.toListR(depth),
+          Utils.toListR(elems, depth),
+          suffix1.toListR(depth),
+          spine1.toListR(depth + 1)
+        )
+        Utils.associativeConcat(
+          suffix2.toListR(depth) ++ spine2.toListR(depth + 1)
+            ++ prefix2.toListR(depth),
+          Utils.toListR(elems, depth),
+          suffix1.toListR(depth) ++ spine1.toListR(depth + 1),
+          prefix1.toListR(depth)
+        )
+
         val elemsRec = elemsTree1 ++ elems ++ elemsTree2
-        val res = Deep(
-          prefix1,
-          concat(spine1, Utils.toNodes(elemsRec, depth), spine2, depth + 1),
-          suffix2
-        )
-        check(
-          res.toListL(depth) == tree1.toListL(depth)
-            ++ Utils.toListL(elems, depth)
-            ++ tree2.toListL(depth)
-        )
-        check(
-          res.toListR(depth) == tree2.toListR(depth)
-            ++ Utils.toListR(elems, depth)
-            ++ tree1.toListR(depth)
-        )
-        res
+        val newElems = Utils.toNodes(elemsRec, depth)
+        Deep(prefix1, concat(spine1, newElems, spine2, depth + 1), suffix2)
     }
   }.ensuring(res =>
     res.isWellFormed(depth)
@@ -959,6 +1014,58 @@ object Utils {
       case Nil()            => Nil()
     }
   }
+
+  def associativeToListL[T](
+      l1: List[Node[T]],
+      l2: List[Node[T]],
+      depth: BigInt
+  ): Boolean = {
+    require(
+      depth >= 0
+        && l1.forall(_.isWellFormed(depth))
+        && l2.forall(_.isWellFormed(depth))
+    )
+    forallConcat(l1, l2, _.isWellFormed(depth))
+    toListL(l1 ++ l2, depth) == toListL(l1, depth)
+      ++ toListL(l2, depth) because {
+        l1 match {
+          case Cons(h, t) =>
+            associativeToListL(t, l2, depth)
+            Utils.associativeConcat(
+              h.toListL(depth),
+              toListL(t, depth),
+              toListL(l2, depth)
+            )
+          case Nil() => toListL(l1, depth) == Nil[T]()
+        }
+      }
+  }.holds
+
+  def associativeToListR[T](
+      l1: List[Node[T]],
+      l2: List[Node[T]],
+      depth: BigInt
+  ): Boolean = {
+    require(
+      depth >= 0
+        && l1.forall(_.isWellFormed(depth))
+        && l2.forall(_.isWellFormed(depth))
+    )
+    forallConcat(l1, l2, _.isWellFormed(depth))
+    toListR(l1 ++ l2, depth) == toListR(l2, depth)
+      ++ toListR(l1, depth) because {
+        l1 match {
+          case Cons(h, t) =>
+            associativeToListR(t, l2, depth)
+            Utils.associativeConcat(
+              toListR(l2, depth),
+              toListR(t, depth),
+              h.toListR(depth)
+            )
+          case Nil() => toListR(l1, depth) == Nil[T]()
+        }
+      }
+  }.holds
 
   def associativeConcat[T](
       l1: List[T],
