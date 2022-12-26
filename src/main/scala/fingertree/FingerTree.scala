@@ -975,13 +975,51 @@ object Utils {
         && elems.forall(_.isWellFormed(depth))
     )
     elems match {
-      case Nil()                            => ???
-      case Cons(a, Nil())                   => ???
-      case Cons(a, Cons(b, Nil()))          => List(Node2(a, b))
-      case Cons(a, Cons(b, Cons(c, Nil()))) => List(Node3(a, b, c))
+      case Nil()                   => ???
+      case Cons(a, Nil())          => ???
+      case Cons(a, Cons(b, Nil())) => List(Node2(a, b))
+      case Cons(a, Cons(b, Cons(c, Nil()))) =>
+        Utils.associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth)
+        )
+        List[Node[T]](Node3(a, b, c))
       case Cons(a, Cons(b, Cons(c, Cons(d, Nil())))) =>
-        List(Node2(a, b), Node2(c, d))
+        Utils.associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth),
+          d.toListL(depth)
+        )
+        Utils.associativeConcat(
+          d.toListR(depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
+        check(
+          Utils.toListL(Cons(c, Cons(d, Nil())), depth) == c.toListL(depth) ++ d
+            .toListL(depth)
+        )
+        check(
+          Utils.toListR(Cons(c, Cons(d, Nil())), depth) == d.toListR(depth)
+            ++ c.toListR(depth)
+        )
+        List[Node[T]](Node2(a, b), Node2(c, d))
       case Cons(a, Cons(b, Cons(c, tail))) => {
+        Utils.associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth),
+          toListL(tail, depth)
+        )
+        Utils.associativeConcat(
+          toListR(tail, depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
         Cons(Node3(a, b, c), toNodes(tail, depth))
       }
     }
