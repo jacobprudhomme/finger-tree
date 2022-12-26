@@ -872,10 +872,22 @@ sealed trait FingerTree[T]:
     )
     decreases(tree1)
     (tree1, tree2) match {
-      case (Empty(), _)   => tree2.addL(elems, depth)
-      case (Single(e), _) => tree2.addL(elems, depth).addL(e, depth)
-      case (_, Empty())   => tree1.addR(elems, depth)
-      case (_, Single(e)) => tree1.addR(elems, depth).addR(e, depth)
+      case (Empty(), _) => tree2.addL(elems, depth)
+      case (_, Empty()) => tree1.addR(elems, depth)
+      case (Single(e), _) =>
+        Utils.associativeConcat(
+          tree1.toListL(depth),
+          Utils.toListL(elems, depth),
+          tree2.toListL(depth)
+        )
+        tree2.addL(elems, depth).addL(e, depth)
+      case (_, Single(e)) =>
+        Utils.associativeConcat(
+          tree2.toListR(depth),
+          Utils.toListR(elems, depth),
+          tree1.toListR(depth)
+        )
+        tree1.addR(elems, depth).addR(e, depth)
       case (Deep(prefix1, spine1, suffix1), Deep(prefix2, spine2, suffix2)) =>
         val elemsTree1 = suffix1.toNodeList(depth)
         val elemsTree2 = prefix1.toNodeList(depth)
@@ -886,11 +898,22 @@ sealed trait FingerTree[T]:
           _.isWellFormed(depth)
         )
         val elemsRec = elemsTree1 ++ elems ++ elemsTree2
-        Deep(
+        val res = Deep(
           prefix1,
           concat(spine1, Utils.toNodes(elemsRec, depth), spine2, depth + 1),
           suffix2
         )
+        check(
+          res.toListL(depth) == tree1.toListL(depth)
+            ++ Utils.toListL(elems, depth)
+            ++ tree2.toListL(depth)
+        )
+        check(
+          res.toListR(depth) == tree2.toListR(depth)
+            ++ Utils.toListR(elems, depth)
+            ++ tree1.toListR(depth)
+        )
+        res
     }
   }.ensuring(res =>
     res.isWellFormed(depth)
