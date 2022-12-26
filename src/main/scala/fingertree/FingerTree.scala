@@ -305,96 +305,6 @@ sealed trait FingerTree[T]:
     this.toListR(0)
   }
 
-  /// INTERNAL HELPERS ///
-
-  private def deepL[T](
-      prefixTail: Option[Digit[T]],
-      spine: FingerTree[T],
-      suffix: Digit[T],
-      depth: BigInt
-  ): FingerTree[T] = {
-    require(
-      depth >= 0
-        && spine.isWellFormed(depth + 1)
-        && prefixTail.forall(_.isWellFormed(depth))
-        && suffix.isWellFormed(depth)
-    )
-    prefixTail match {
-      case Some(digit) => Deep(digit, spine, suffix)
-      case None() =>
-        spine match {
-          case Empty()       => suffix.toTree(depth)
-          case Single(value) => Deep(value.toDigit(depth + 1), Empty(), suffix)
-          case Deep(spinePrefix, spineSpine, spineSuffix) =>
-            Deep(
-              spinePrefix.headL(depth + 1).toDigit(depth + 1),
-              deepL(
-                spinePrefix.tailL(depth + 1),
-                spineSpine,
-                spineSuffix,
-                depth + 1
-              ),
-              suffix
-            )
-        }
-    }
-  }.ensuring(res =>
-    res.isWellFormed(depth)
-      && {
-        val prefix = prefixTail match {
-          case Some(pref) => pref.toListL(depth)
-          case None()     => List()
-        }
-        res.toListL(depth) == prefix
-          ++ spine.toListL(depth + 1)
-          ++ suffix.toListL(depth)
-      }
-  )
-
-  private def deepR[T](
-      prefix: Digit[T],
-      spine: FingerTree[T],
-      suffixTail: Option[Digit[T]],
-      depth: BigInt
-  ): FingerTree[T] = {
-    require(
-      depth >= 0
-        && spine.isWellFormed(depth + 1)
-        && prefix.isWellFormed(depth)
-        && suffixTail.forall(_.isWellFormed(depth))
-    )
-    suffixTail match {
-      case Some(digit) => Deep(prefix, spine, digit)
-      case None() =>
-        spine match {
-          case Empty()       => prefix.toTree(depth)
-          case Single(value) => Deep(prefix, Empty(), value.toDigit(depth + 1))
-          case Deep(spinePrefix, spineSpine, spineSuffix) =>
-            Deep(
-              prefix,
-              deepR(
-                spinePrefix,
-                spineSpine,
-                spineSuffix.tailR(depth + 1),
-                depth + 1
-              ),
-              spineSuffix.headR(depth + 1).toDigit(depth + 1)
-            )
-        }
-    }
-  }.ensuring(res =>
-    res.isWellFormed(depth)
-      && {
-        val suffix = suffixTail match {
-          case Some(suff) => suff.toListR(depth)
-          case None()     => List()
-        }
-        res.toListR(depth) == suffix
-          ++ spine.toListR(depth + 1)
-          ++ prefix.toListR(depth)
-      }
-  )
-
   /// 3.2 DEQUE OPERATIONS ///
 
   private def addL(value: Node[T], depth: BigInt): FingerTree[T] = {
@@ -704,7 +614,7 @@ sealed trait FingerTree[T]:
           case Leaf(value) =>
             ConsV(
               value,
-              deepL(prefix.tailL(0), spine, suffix, 0)
+              Utils.deepL(prefix.tailL(0), spine, suffix, 0)
             )
           case _ => ???
         }
@@ -732,7 +642,7 @@ sealed trait FingerTree[T]:
           case Leaf(value) =>
             ConsV(
               value,
-              deepR(prefix, spine, suffix.tailR(0), 0)
+              Utils.deepR(prefix, spine, suffix.tailR(0), 0)
             )
           case _ => ???
         }
@@ -999,21 +909,7 @@ sealed trait FingerTree[T]:
   )
 
 object Utils {
-  def toListL[T](elems: List[Node[T]], depth: BigInt): List[T] = {
-    require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
-    elems match {
-      case Cons(head, tail) => head.toListL(depth) ++ toListL(tail, depth)
-      case Nil()            => Nil()
-    }
-  }
-
-  def toListR[T](elems: List[Node[T]], depth: BigInt): List[T] = {
-    require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
-    elems match {
-      case Cons(head, tail) => toListR(tail, depth) ++ head.toListR(depth)
-      case Nil()            => Nil()
-    }
-  }
+  // Lemmas
 
   def associativeToListL[T](
       l1: List[Node[T]],
@@ -1031,7 +927,7 @@ object Utils {
         l1 match {
           case Cons(h, t) =>
             associativeToListL(t, l2, depth)
-            Utils.associativeConcat(
+            associativeConcat(
               h.toListL(depth),
               toListL(t, depth),
               toListL(l2, depth)
@@ -1057,7 +953,7 @@ object Utils {
         l1 match {
           case Cons(h, t) =>
             associativeToListR(t, l2, depth)
-            Utils.associativeConcat(
+            associativeConcat(
               toListR(l2, depth),
               toListR(t, depth),
               h.toListR(depth)
@@ -1098,67 +994,6 @@ object Utils {
     }
   }.holds
 
-  def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
-    require(
-      depth >= 0
-        && elems.size >= 2
-        && elems.forall(_.isWellFormed(depth))
-    )
-    elems match {
-      case Nil()                   => ???
-      case Cons(a, Nil())          => ???
-      case Cons(a, Cons(b, Nil())) => List(Node2(a, b))
-      case Cons(a, Cons(b, Cons(c, Nil()))) =>
-        Utils.associativeConcat(
-          a.toListL(depth),
-          b.toListL(depth),
-          c.toListL(depth)
-        )
-        List[Node[T]](Node3(a, b, c))
-      case Cons(a, Cons(b, Cons(c, Cons(d, Nil())))) =>
-        Utils.associativeConcat(
-          a.toListL(depth),
-          b.toListL(depth),
-          c.toListL(depth),
-          d.toListL(depth)
-        )
-        Utils.associativeConcat(
-          d.toListR(depth),
-          c.toListR(depth),
-          b.toListR(depth),
-          a.toListR(depth)
-        )
-        check(
-          Utils.toListL(Cons(c, Cons(d, Nil())), depth) == c.toListL(depth) ++ d
-            .toListL(depth)
-        )
-        check(
-          Utils.toListR(Cons(c, Cons(d, Nil())), depth) == d.toListR(depth)
-            ++ c.toListR(depth)
-        )
-        List[Node[T]](Node2(a, b), Node2(c, d))
-      case Cons(a, Cons(b, Cons(c, tail))) => {
-        Utils.associativeConcat(
-          a.toListL(depth),
-          b.toListL(depth),
-          c.toListL(depth),
-          toListL(tail, depth)
-        )
-        Utils.associativeConcat(
-          toListR(tail, depth),
-          c.toListR(depth),
-          b.toListR(depth),
-          a.toListR(depth)
-        )
-        Cons(Node3(a, b, c), toNodes(tail, depth))
-      }
-    }
-  }.ensuring(res =>
-    res.forall(_.isWellFormed(depth + 1))
-      && Utils.toListL(res, depth + 1) == Utils.toListL(elems, depth)
-      && Utils.toListR(res, depth + 1) == Utils.toListR(elems, depth)
-  )
-
   def forallConcat[T](
       l1: List[T],
       l2: List[T],
@@ -1187,6 +1022,175 @@ object Utils {
     require(!l1.isEmpty)
     (l1 ++ l2).head == l1.head
   }.holds
+
+  // Helper functions
+
+  def toListL[T](elems: List[Node[T]], depth: BigInt): List[T] = {
+    require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
+    elems match {
+      case Cons(head, tail) => head.toListL(depth) ++ toListL(tail, depth)
+      case Nil()            => Nil()
+    }
+  }
+
+  def toListR[T](elems: List[Node[T]], depth: BigInt): List[T] = {
+    require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
+    elems match {
+      case Cons(head, tail) => toListR(tail, depth) ++ head.toListR(depth)
+      case Nil()            => Nil()
+    }
+  }
+
+  // FingerTree helper functions
+
+  def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
+    require(
+      depth >= 0
+        && elems.size >= 2
+        && elems.forall(_.isWellFormed(depth))
+    )
+    elems match {
+      case Nil()                   => ???
+      case Cons(a, Nil())          => ???
+      case Cons(a, Cons(b, Nil())) => List(Node2(a, b))
+      case Cons(a, Cons(b, Cons(c, Nil()))) =>
+        associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth)
+        )
+        List[Node[T]](Node3(a, b, c))
+      case Cons(a, Cons(b, Cons(c, Cons(d, Nil())))) =>
+        associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth),
+          d.toListL(depth)
+        )
+        associativeConcat(
+          d.toListR(depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
+        check(
+          toListL(Cons(c, Cons(d, Nil())), depth) == c.toListL(depth) ++ d
+            .toListL(depth)
+        )
+        check(
+          toListR(Cons(c, Cons(d, Nil())), depth) == d.toListR(depth)
+            ++ c.toListR(depth)
+        )
+        List[Node[T]](Node2(a, b), Node2(c, d))
+      case Cons(a, Cons(b, Cons(c, tail))) => {
+        associativeConcat(
+          a.toListL(depth),
+          b.toListL(depth),
+          c.toListL(depth),
+          toListL(tail, depth)
+        )
+        associativeConcat(
+          toListR(tail, depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth)
+        )
+        Cons(Node3(a, b, c), toNodes(tail, depth))
+      }
+    }
+  }.ensuring(res =>
+    res.forall(_.isWellFormed(depth + 1))
+      && toListL(res, depth + 1) == toListL(elems, depth)
+      && toListR(res, depth + 1) == toListR(elems, depth)
+  )
+
+  def deepL[T](
+      prefixTail: Option[Digit[T]],
+      spine: FingerTree[T],
+      suffix: Digit[T],
+      depth: BigInt
+  ): FingerTree[T] = {
+    require(
+      depth >= 0
+        && spine.isWellFormed(depth + 1)
+        && prefixTail.forall(_.isWellFormed(depth))
+        && suffix.isWellFormed(depth)
+    )
+    prefixTail match {
+      case Some(digit) => Deep(digit, spine, suffix)
+      case None() =>
+        spine match {
+          case Empty()       => suffix.toTree(depth)
+          case Single(value) => Deep(value.toDigit(depth + 1), Empty(), suffix)
+          case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            Deep(
+              spinePrefix.headL(depth + 1).toDigit(depth + 1),
+              deepL(
+                spinePrefix.tailL(depth + 1),
+                spineSpine,
+                spineSuffix,
+                depth + 1
+              ),
+              suffix
+            )
+        }
+    }
+  }.ensuring(res =>
+    res.isWellFormed(depth)
+      && {
+        val prefix = prefixTail match {
+          case Some(pref) => pref.toListL(depth)
+          case None()     => List()
+        }
+        res.toListL(depth) == prefix
+          ++ spine.toListL(depth + 1)
+          ++ suffix.toListL(depth)
+      }
+  )
+
+  def deepR[T](
+      prefix: Digit[T],
+      spine: FingerTree[T],
+      suffixTail: Option[Digit[T]],
+      depth: BigInt
+  ): FingerTree[T] = {
+    require(
+      depth >= 0
+        && spine.isWellFormed(depth + 1)
+        && prefix.isWellFormed(depth)
+        && suffixTail.forall(_.isWellFormed(depth))
+    )
+    suffixTail match {
+      case Some(digit) => Deep(prefix, spine, digit)
+      case None() =>
+        spine match {
+          case Empty()       => prefix.toTree(depth)
+          case Single(value) => Deep(prefix, Empty(), value.toDigit(depth + 1))
+          case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            Deep(
+              prefix,
+              deepR(
+                spinePrefix,
+                spineSpine,
+                spineSuffix.tailR(depth + 1),
+                depth + 1
+              ),
+              spineSuffix.headR(depth + 1).toDigit(depth + 1)
+            )
+        }
+    }
+  }.ensuring(res =>
+    res.isWellFormed(depth)
+      && {
+        val suffix = suffixTail match {
+          case Some(suff) => suff.toListR(depth)
+          case None()     => List()
+        }
+        res.toListR(depth) == suffix
+          ++ spine.toListR(depth + 1)
+          ++ prefix.toListR(depth)
+      }
+  )
 }
 
 final case class Empty[T]() extends FingerTree[T]
