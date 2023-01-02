@@ -10,13 +10,25 @@ private sealed trait Node[T]:
     this match {
       case Leaf(a) => List(a)
       case Node2(left, right) =>
+        Utils.reverseConcat(left.toListL(depth - 1), right.toListL(depth - 1))
         left.toListL(depth - 1) ++ right.toListL(depth - 1)
       case Node3(left, middle, right) =>
+        Utils.reverseConcat(left.toListL(depth - 1), middle.toListL(depth - 1))
+        Utils.reverseConcat(left.toListL(depth - 1)
+          ++ middle.toListL(depth - 1), right.toListL(depth - 1))
+        Utils.associativeConcat(
+          right.toListR(depth - 1),
+          middle.toListR(depth - 1),
+          left.toListR(depth - 1),
+        )
         left.toListL(depth - 1)
           ++ middle.toListL(depth - 1)
           ++ right.toListL(depth - 1)
     }
-  }.ensuring(!_.isEmpty)
+  }.ensuring(res =>
+    !res.isEmpty
+    && res.reverse == this.toListR(depth)
+  )
 
   def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -151,15 +163,39 @@ private sealed trait Digit[T]:
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(a)    => a.toListL(depth)
-      case Digit2(a, b) => a.toListL(depth) ++ b.toListL(depth)
+      case Digit2(a, b) =>
+        Utils.reverseConcat(a.toListL(depth), b.toListL(depth))
+        a.toListL(depth) ++ b.toListL(depth)
       case Digit3(a, b, c) =>
+        Utils.reverseConcat(a.toListL(depth), b.toListL(depth))
+        Utils.reverseConcat(a.toListL(depth)
+          ++ b.toListL(depth), c.toListL(depth))
+        Utils.associativeConcat(
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth),
+        )
         a.toListL(depth) ++ b.toListL(depth)
           ++ c.toListL(depth)
       case Digit4(a, b, c, d) =>
+        Utils.reverseConcat(a.toListL(depth), b.toListL(depth))
+        Utils.reverseConcat(a.toListL(depth)
+          ++ b.toListL(depth), c.toListL(depth))
+        Utils.reverseConcat(a.toListL(depth)
+          ++ b.toListL(depth) ++ c.toListL(depth), d.toListL(depth))
+        Utils.associativeConcat(
+          d.toListR(depth),
+          c.toListR(depth),
+          b.toListR(depth),
+          a.toListR(depth),
+        )
         a.toListL(depth) ++ b.toListL(depth)
           ++ c.toListL(depth) ++ d.toListL(depth)
     }
-  }.ensuring(!_.isEmpty)
+  }.ensuring(res =>
+    !res.isEmpty
+    && res.reverse == this.toListR(depth)
+  )
 
   def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -277,16 +313,28 @@ sealed trait FingerTree[T]:
       case Empty()   => Nil()
       case Single(a) => a.toListL(depth)
       case Deep(prefix, spine, suffix) =>
+        Utils.reverseConcat(prefix.toListL(depth), spine.toListL(depth + 1))
+        Utils.reverseConcat(prefix.toListL(depth)
+          ++ spine.toListL(depth + 1), suffix.toListL(depth))
+        Utils.associativeConcat(
+          suffix.toListR(depth),
+          spine.toListR(depth + 1),
+          prefix.toListR(depth),
+        )
         prefix.toListL(depth)
           ++ spine.toListL(depth + 1)
           ++ suffix.toListL(depth)
     }
-  }
+  }.ensuring(res =>
+    res.reverse == this.toListR(depth)
+  )
 
   def toListL(): List[T] = {
     require(this.isWellFormed)
     this.toListL(0)
-  }
+  }.ensuring(res =>
+    res.reverse == this.toListR()
+  )
 
   def toListR(depth: BigInt): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
@@ -668,14 +716,7 @@ sealed trait FingerTree[T]:
       case Deep(prefix, spine, suffix) =>
         prefix.headL(0) match {
           case Leaf(value) =>
-            Utils.lastConcat(
-              suffix.toListR(0) ++ spine.toListR(1),
-              prefix.toListR(0)
-            )
-            Utils.lastConcat(
-              prefix.toListL(0) ++ spine.toListL(1),
-              suffix.toListL(0)
-            )
+            Utils.reverseHead(this.toListL())
             Some(value)
           case _ => ???
         }
@@ -695,14 +736,8 @@ sealed trait FingerTree[T]:
       case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) =>
-            Utils.lastConcat(
-              suffix.toListR(0) ++ spine.toListR(1),
-              prefix.toListR(0)
-            )
-            Utils.lastConcat(
-              prefix.toListL(0) ++ spine.toListL(1),
-              suffix.toListL(0)
-            )
+            Utils.reverseHead(this.toListR())
+            Utils.treeToListRReverse(this, 0)
             Some(value)
           case _ => ???
         }
@@ -909,6 +944,7 @@ sealed trait FingerTree[T]:
   )
 
 object Utils {
+
   // Lemmas
 
   def associativeToListL[T](
@@ -1023,15 +1059,83 @@ object Utils {
     (l1 ++ l2).head == l1.head
   }.holds
 
+  def appendConcat[T](l1: List[T], l2: List[T], e: T): Boolean = {
+    l1 ++ (l2 :+ e) == (l1 ++ l2) :+ e because {
+      l1 match {
+        case Cons(h, t) => appendConcat(t, l2, e)
+        case Nil() => trivial
+      }
+    }
+  }.holds
+
+  def reverseAppend[T](l1: List[T], e: T): Boolean = {
+    (l1 :+ e).reverse == e :: l1.reverse because {
+      l1 match {
+        case Cons(h, t) => reverseAppend(t, e)
+        case Nil() => trivial
+      }
+    }
+  }.holds
+
+  def reverseSymmetry[T](l1: List[T]): Boolean = {
+    l1.reverse.reverse == l1 because {
+      l1 match {
+        case Cons(h, t) =>
+          reverseSymmetry(t)
+          reverseAppend(t.reverse, h)
+        case Nil() => trivial
+      }
+    }
+  }.holds
+
+  def reverseConcat[T](l1: List[T], l2: List[T]): Boolean = {
+    (l1 ++ l2).reverse == l2.reverse ++ l1.reverse because {
+      l1 match {
+        case Cons(h, t) =>
+          appendConcat(l2.reverse, t.reverse, h) // l2.reverse ++ l1.reverse == (l2.reverse ++ t.reverse) :+ h
+          reverseConcat(t, l2) // (t ++ l2).reverse == l2.reverse ++ t.reverse
+        case Nil() => trivial
+      }
+    }
+  }.holds
+
+  def appendLast[T](l: List[T], e: T): Boolean = {
+    (l :+ e).lastOption == Some[T](e) because {
+      l match {
+        case Nil() => trivial
+        case Cons(_, t) => appendLast(t, e)
+      }
+    }
+  }.holds
+
+  def reverseHead[T](l: List[T]): Boolean = {
+    l.reverse.lastOption == l.headOption because {
+      l match {
+        case Cons(h, t) =>
+          check(l.reverse == t.reverse :+ h)
+          appendLast(t.reverse, h) // (t.reverse :+ h).last == h
+        case Nil() => trivial
+      }
+    }
+  }.holds
+
   // Helper functions
 
   def toListL[T](elems: List[Node[T]], depth: BigInt): List[T] = {
     require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
     elems match {
-      case Cons(head, tail) => head.toListL(depth) ++ toListL(tail, depth)
+      case Cons(head, tail) =>
+        Utils.reverseConcat(head.toListL(depth), toListL(tail, depth))
+        // Utils.associativeConcat(
+        //   toListR(tail, depth),
+        //   head.toListR(depth),
+        // )
+        head.toListL(depth) ++ toListL(tail, depth)
       case Nil()            => Nil()
     }
-  }
+  }.ensuring(res =>
+    res.reverse == toListR(elems, depth)
+  )
 
   def toListR[T](elems: List[Node[T]], depth: BigInt): List[T] = {
     require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
@@ -1040,6 +1144,27 @@ object Utils {
       case Nil()            => Nil()
     }
   }
+
+  // FingerTree lemmas
+  def nodesToListRReverse[T](node: Node[T], depth: BigInt): Boolean = {
+    require(depth >= 0 && node.isWellFormed(depth))
+    node.toListL(depth) == node.toListR(depth).reverse because reverseSymmetry(node.toListL(depth) )
+  }.holds
+
+  def nodeListToListRReverse[T](elems: List[Node[T]], depth: BigInt): Boolean = {
+    require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
+    toListL(elems, depth) == toListR(elems, depth).reverse because reverseSymmetry(toListL(elems, depth))
+  }.holds
+
+  def digitToListRReverse[T](digit: Digit[T], depth: BigInt): Boolean = {
+    require(depth >= 0 && digit.isWellFormed(depth))
+    digit.toListL(depth) == digit.toListR(depth).reverse because reverseSymmetry(digit.toListL(depth) )
+  }.holds
+
+  def treeToListRReverse[T](tree: FingerTree[T], depth: BigInt): Boolean = {
+    require(depth >= 0 && tree.isWellFormed(depth))
+    tree.toListL(depth) == tree.toListR(depth).reverse because reverseSymmetry(tree.toListL(depth) )
+  }.holds
 
   // FingerTree helper functions
 
