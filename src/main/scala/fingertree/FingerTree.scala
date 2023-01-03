@@ -136,7 +136,9 @@ private sealed trait Digit[T]:
     decreases(this)
     this.tailL(depth) match {
       case None()     => List(this.headL(depth))
-      case Some(tail) => Cons(this.headL(depth), tail.toNodeList(depth))
+      case Some(tail) =>
+        Utils.headTailConcatL(this, depth)
+        Cons(this.headL(depth), tail.toNodeList(depth))
     }
   }.ensuring(res =>
     !res.isEmpty
@@ -1137,10 +1139,6 @@ object Utils {
     elems match {
       case Cons(head, tail) =>
         Utils.reverseConcat(head.toListL(depth), toListL(tail, depth))
-        // Utils.associativeConcat(
-        //   toListR(tail, depth),
-        //   head.toListR(depth),
-        // )
         head.toListL(depth) ++ toListL(tail, depth)
       case Nil()            => Nil()
     }
