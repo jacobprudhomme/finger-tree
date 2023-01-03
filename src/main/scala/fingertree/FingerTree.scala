@@ -116,10 +116,6 @@ private sealed trait Digit[T]:
     }
   }.ensuring(res =>
     res.forall(_.isWellFormed(depth))
-    // && (res match {
-    //   case None()     => !this.toListL(depth).tailOption.isDefined
-    //   case Some(tail) => tail.toListL(depth) == this.toListL(depth).tail
-    // })
   )
 
   def tailR(depth: BigInt): Option[Digit[T]] = {
@@ -132,10 +128,6 @@ private sealed trait Digit[T]:
     }
   }.ensuring(res =>
     res.forall(_.isWellFormed(depth))
-    // && (res match {
-    //   case None()     => !this.toListR(depth).tailOption.isDefined
-    //   case Some(tail) => tail.toListR(depth) == this.toListR(depth).tail
-    // })
   )
 
   // this is awful but stainless loves it
@@ -660,6 +652,12 @@ sealed trait FingerTree[T]:
       case Deep(prefix, spine, suffix) =>
         prefix.headL(0) match {
           case Leaf(value) =>
+            check(this.headL == Some[T](value))
+            Utils.tailConcat(prefix.toListL(0), spine.toListL(1))
+            Utils.tailConcat(
+              prefix.toListL(0) ++ spine.toListL(1),
+              suffix.toListL(0)
+            )
             ConsV(
               value,
               Utils.deepL(prefix.tailL(0), spine, suffix, 0)
@@ -673,8 +671,8 @@ sealed trait FingerTree[T]:
         case NilV() => true
         case ConsV(head, rest) =>
           rest.isWellFormed
-          && head == this.toListL().head
-          && head == this.toListR().last
+          && Some[T](head) == this.toListL().headOption
+          && Some[T](head) == this.toListR().lastOption
           && rest.toListL() == this.toListL().tail
       })
   )
@@ -688,10 +686,18 @@ sealed trait FingerTree[T]:
       case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) =>
-            ConsV(
-              value,
+            check(this.headR == Some[T](value))
+            Utils.tailConcat(suffix.toListL(0), spine.toListL(1))
+            Utils.tailConcat(
+              suffix.toListL(0) ++ spine.toListL(1),
+              prefix.toListL(0)
+            )
+            val res = ConsV(
+              this.headR.get,
               Utils.deepR(prefix, spine, suffix.tailR(0), 0)
             )
+            check(res.rest.toListR() == this.toListR().tail)
+            res
           case _ => ???
         }
     }
@@ -701,8 +707,8 @@ sealed trait FingerTree[T]:
         case NilV() => true
         case ConsV(head, rest) =>
           rest.isWellFormed
-          && head == this.toListR().head
-          && head == this.toListL().last
+          && Some[T](head) == this.toListR().headOption
+          && Some[T](head) == this.toListL().lastOption
           && rest.toListR() == this.toListR().tail
       })
   )
@@ -838,12 +844,6 @@ sealed trait FingerTree[T]:
       case (Deep(prefix1, spine1, suffix1), Deep(prefix2, spine2, suffix2)) =>
         val elemsTree1 = suffix1.toNodeList(depth)
         val elemsTree2 = prefix2.toNodeList(depth)
-        Utils.forallConcat(elemsTree1, elems, _.isWellFormed(depth))
-        Utils.forallConcat(
-          elemsTree1 ++ elems,
-          elemsTree2,
-          _.isWellFormed(depth)
-        )
 
         Utils.associativeToListL(elemsTree1, elems, depth)
         Utils.associativeToListL(elemsTree1 ++ elems, elemsTree2, depth)
@@ -911,6 +911,12 @@ sealed trait FingerTree[T]:
           prefix1.toListR(depth)
         )
 
+        Utils.forallConcat(elemsTree1, elems, _.isWellFormed(depth))
+        Utils.forallConcat(
+          elemsTree1 ++ elems,
+          elemsTree2,
+          _.isWellFormed(depth)
+        )
         val elemsRec = elemsTree1 ++ elems ++ elemsTree2
         val newElems = Utils.toNodes(elemsRec, depth)
         Deep(prefix1, concat(spine1, newElems, spine2, depth + 1), suffix2)
@@ -1057,6 +1063,11 @@ object Utils {
   def headConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l1.isEmpty)
     (l1 ++ l2).head == l1.head
+  }.holds
+
+  def tailConcat[T](l1: List[T], l2: List[T]): Boolean = {
+    require(!l1.isEmpty)
+    (l1 ++ l2).tail == l1.tail ++ l2
   }.holds
 
   def appendConcat[T](l1: List[T], l2: List[T], e: T): Boolean = {
@@ -1334,4 +1345,4 @@ sealed trait View[T]:
     }
 
 final case class NilV[T]() extends View[T]
-final case class ConsV[T](value: T, rest: FingerTree[T]) extends View[T]
+final case class ConsV[T](head: T, rest: FingerTree[T]) extends View[T]
