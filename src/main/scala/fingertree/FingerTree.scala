@@ -1177,6 +1177,24 @@ object Utils {
     tree.toListL(depth) == tree.toListR(depth).reverse because reverseSymmetry(tree.toListL(depth) )
   }.holds
 
+  def headTailConcatL[T](digit: Digit[T], depth: BigInt): Boolean = {
+    require(depth >= 0 && digit.isWellFormed(depth))
+    val tailList = digit.tailL(depth) match {
+      case Some(tail) => tail.toListL(depth)
+      case None() => List()
+    }
+    digit.toListL(depth) == digit.headL(depth).toListL(depth) ++ tailList
+  }.holds
+
+  def headTailConcatR[T](digit: Digit[T], depth: BigInt): Boolean = {
+    require(depth >= 0 && digit.isWellFormed(depth))
+    val tailList = digit.tailR(depth) match {
+      case Some(tail) => tail.toListR(depth)
+      case None() => List()
+    }
+    digit.toListR(depth) == digit.headR(depth).toListR(depth) ++ tailList
+  }.holds
+
   // FingerTree helper functions
 
   def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
@@ -1253,12 +1271,24 @@ object Utils {
         && suffix.isWellFormed(depth)
     )
     prefixTail match {
-      case Some(digit) => Deep(digit, spine, suffix)
+      case Some(digit) =>
+        Deep(digit, spine, suffix)
       case None() =>
         spine match {
           case Empty()       => suffix.toTree(depth)
           case Single(value) => Deep(value.toDigit(depth + 1), Empty(), suffix)
           case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            val prefix = spinePrefix.tailL(depth+1) match {
+              case Some(pref) => pref.toListL(depth+1)
+              case None()     => List()
+            }
+            headTailConcatL(spinePrefix, depth+1)
+            associativeConcat(
+              spinePrefix.headL(depth+1).toListL(depth+1),
+              prefix,
+              spineSpine.toListL(depth+2),
+              spineSuffix.toListL(depth+1)
+            )
             Deep(
               spinePrefix.headL(depth + 1).toDigit(depth + 1),
               deepL(
@@ -1303,6 +1333,17 @@ object Utils {
           case Empty()       => prefix.toTree(depth)
           case Single(value) => Deep(prefix, Empty(), value.toDigit(depth + 1))
           case Deep(spinePrefix, spineSpine, spineSuffix) =>
+            val suffix = spineSuffix.tailR(depth+1) match {
+              case Some(suff) => suff.toListR(depth+1)
+              case None()     => List()
+            }
+            headTailConcatR(spineSuffix, depth+1)
+            associativeConcat(
+              spineSuffix.headR(depth+1).toListR(depth+1),
+              suffix,
+              spineSpine.toListR(depth+2),
+              spinePrefix.toListR(depth+1),
+            )
             Deep(
               prefix,
               deepR(
