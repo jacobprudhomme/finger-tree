@@ -688,18 +688,15 @@ sealed trait FingerTree[T]:
       case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) =>
-            check(this.headR == Some[T](value))
-            Utils.tailConcat(suffix.toListL(0), spine.toListL(1))
+            Utils.tailConcat(suffix.toListR(0), spine.toListR(1))
             Utils.tailConcat(
-              suffix.toListL(0) ++ spine.toListL(1),
-              prefix.toListL(0)
+              suffix.toListR(0) ++ spine.toListR(1),
+              prefix.toListR(0)
             )
-            val res = ConsV(
+            ConsV(
               this.headR.get,
               Utils.deepR(prefix, spine, suffix.tailR(0), 0)
             )
-            check(res.rest.toListR() == this.toListR().tail)
-            res
           case _ => ???
         }
     }
