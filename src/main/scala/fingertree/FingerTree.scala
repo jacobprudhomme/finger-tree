@@ -442,7 +442,7 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()         => None[T]()
       case Single(Leaf(e)) => Some(e)
-      case Single(_)       => ???
+      case Single(_)       => ??? // Should never get here
       case Deep(prefix, spine, suffix) =>
         prefix.headL(0) match {
           case Leaf(value) => {
@@ -450,7 +450,7 @@ sealed trait FingerTree[T]:
 
             Some(value)
           }
-          case _ => ???
+          case _ => ??? // Should never get here
         }
     }
   }.ensuring(res =>
@@ -488,7 +488,7 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()             => NilV()
       case Single(Leaf(value)) => ConsV(value, Empty())
-      case Single(_)           => ???
+      case Single(_)           => ??? // Should never get here
       case Deep(prefix, spine, suffix) =>
         prefix.headL(0) match {
           case Leaf(value) => {
@@ -505,7 +505,7 @@ sealed trait FingerTree[T]:
               Helpers.deepL(prefix.tailL(0), spine, suffix, 0)
             )
           }
-          case _ => ???
+          case _ => ??? // Should never get here
         }
     }
   }.ensuring(res =>
@@ -528,7 +528,7 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()         => None()
       case Single(Leaf(e)) => Some(e)
-      case Single(_)       => ???
+      case Single(_)       => ??? // Should never get here
       case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) => {
@@ -537,7 +537,7 @@ sealed trait FingerTree[T]:
 
             Some(value)
           }
-          case _ => ???
+          case _ => ??? // Should never get here
         }
     }
   }.ensuring(res =>
@@ -576,7 +576,7 @@ sealed trait FingerTree[T]:
     this match {
       case Empty()             => NilV()
       case Single(Leaf(value)) => ConsV(value, Empty())
-      case Single(_)           => ???
+      case Single(_)           => ??? // Should never get here
       case Deep(prefix, spine, suffix) =>
         suffix.headR(0) match {
           case Leaf(value) => {
@@ -591,7 +591,7 @@ sealed trait FingerTree[T]:
               Helpers.deepR(prefix, spine, suffix.tailR(0), 0)
             )
           }
-          case _ => ???
+          case _ => ??? // Should never get here
         }
     }
   }.ensuring(res =>
