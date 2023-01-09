@@ -57,7 +57,7 @@ object ListLemmas {
       }
   }.holds
 
-  def associativeConcat[T, M](
+  def associativeConcat[T](
       l1: List[T],
       l2: List[T],
       l3: List[T]
@@ -70,7 +70,7 @@ object ListLemmas {
     }
   }.holds
 
-  def associativeConcat[T, M](
+  def associativeConcat[T](
       l1: List[T],
       l2: List[T],
       l3: List[T],
@@ -88,7 +88,7 @@ object ListLemmas {
     }
   }.holds
 
-  def forallConcat[T, M](
+  def forallConcat[T](
       l1: List[T],
       l2: List[T],
       p: T => Boolean
@@ -102,7 +102,7 @@ object ListLemmas {
     }
   }.holds
 
-  def lastConcat[T, M](l1: List[T], l2: List[T]): Boolean = {
+  def lastConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l2.isEmpty)
     (l1 ++ l2).lastOption == l2.lastOption because {
       l1 match {
@@ -112,17 +112,17 @@ object ListLemmas {
     }
   }.holds
 
-  def headConcat[T, M](l1: List[T], l2: List[T]): Boolean = {
+  def headConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l1.isEmpty)
     (l1 ++ l2).head == l1.head
   }.holds
 
-  def tailConcat[T, M](l1: List[T], l2: List[T]): Boolean = {
+  def tailConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l1.isEmpty)
     (l1 ++ l2).tail == l1.tail ++ l2
   }.holds
 
-  def appendConcat[T, M](l1: List[T], l2: List[T], e: T): Boolean = {
+  def appendConcat[T](l1: List[T], l2: List[T], e: T): Boolean = {
     l1 ++ (l2 :+ e) == (l1 ++ l2) :+ e because {
       l1 match {
         case Cons(h, t) => appendConcat(t, l2, e)
@@ -131,7 +131,7 @@ object ListLemmas {
     }
   }.holds
 
-  def reverseAppend[T, M](l1: List[T], e: T): Boolean = {
+  def reverseAppend[T](l1: List[T], e: T): Boolean = {
     (l1 :+ e).reverse == e :: l1.reverse because {
       l1 match {
         case Cons(h, t) => reverseAppend(t, e)
@@ -140,7 +140,7 @@ object ListLemmas {
     }
   }.holds
 
-  def reverseSymetry[T, M](l1: List[T]): Boolean = {
+  def reverseSymetry[T](l1: List[T]): Boolean = {
     l1.reverse.reverse == l1 because {
       l1 match {
         case Cons(h, t) =>
@@ -151,7 +151,7 @@ object ListLemmas {
     }
   }.holds
 
-  def reverseConcat[T, M](l1: List[T], l2: List[T]): Boolean = {
+  def reverseConcat[T](l1: List[T], l2: List[T]): Boolean = {
     (l1 ++ l2).reverse == l2.reverse ++ l1.reverse because {
       l1 match {
         case Cons(h, t) =>
@@ -162,7 +162,7 @@ object ListLemmas {
     }
   }.holds
 
-  def appendLast[T, M](l: List[T], e: T): Boolean = {
+  def appendLast[T](l: List[T], e: T): Boolean = {
     (l :+ e).lastOption == Some[T](e) because {
       l match {
         case Nil()      => trivial
@@ -171,7 +171,7 @@ object ListLemmas {
     }
   }.holds
 
-  def reverseHead[T, M](l: List[T]): Boolean = {
+  def reverseHead[T](l: List[T]): Boolean = {
     l.reverse.lastOption == l.headOption because {
       l match {
         case Cons(h, t) =>

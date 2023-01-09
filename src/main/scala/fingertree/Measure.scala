@@ -1,5 +1,9 @@
 package fingertree
 
+import stainless.lang._
+import stainless.collection._
+import stainless.proof._
+
 trait Measure[T, M] {
   def zero: M
 
@@ -7,5 +11,5 @@ trait Measure[T, M] {
 
   def |+|(a: M, b: M): M
 
-  final def |+|(elems: M*): M = elems.foldLeft(zero)(|+|)
+  final def |+|(elems: List[M]): M = elems.foldLeft(zero)(|+|)
 }
