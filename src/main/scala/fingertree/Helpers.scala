@@ -4,8 +4,11 @@ import stainless.lang._
 import stainless.collection._
 import stainless.proof._
 
-// Helper functions
+/// This file contains various helper functions which didn't fit directly
+/// with the definition of the types
+
 object Helpers {
+  /// Converts a list of Nodes to a list of elements, from the left side
   def toListL[T, M](elems: List[Node[T, M]], depth: BigInt)(implicit
       m: Measure[T, M]
   ): List[T] = {
@@ -18,6 +21,7 @@ object Helpers {
     }
   }.ensuring(res => res.reverse == toListR(elems, depth))
 
+  /// Converts a list of Nodes to a list of elements, from the right side
   def toListR[T, M](elems: List[Node[T, M]], depth: BigInt)(implicit
       m: Measure[T, M]
   ): List[T] = {
@@ -28,6 +32,7 @@ object Helpers {
     }
   }
 
+  /// Groups a List of Node to a single level deeper
   def toNodes[T, M](elems: List[Node[T, M]], depth: BigInt)(implicit
       m: Measure[T, M]
   ): List[Node[T, M]] = {
@@ -91,6 +96,7 @@ object Helpers {
       && toListR(res, depth + 1) == toListR(elems, depth)
   )
 
+  /// Builds a FingerTree from an optional prefix, a spine and a suffix
   def deepL[T, M](
       prefixTail: Option[Digit[T, M]],
       spine: FingerTree[T, M],
@@ -146,6 +152,7 @@ object Helpers {
       }
   )
 
+  /// Builds a FingerTree from a prefix, a spine and an optional suffix
   def deepR[T, M](
       prefix: Digit[T, M],
       spine: FingerTree[T, M],

@@ -4,59 +4,15 @@ import stainless.lang._
 import stainless.collection._
 import stainless.proof._
 
+/// This file contains various lemmas used in proofs in the other files.
+/// It is split in two different objets:
+/// - ListLemmas contains lemmas which are strictly related to stainless'
+///   List type
+/// - FingerTreeLemmas contains lemmas about the custom types defined in the
+///   other files
+
 object ListLemmas {
-  def associativeToListL[T, M](
-      l1: List[Node[T, M]],
-      l2: List[Node[T, M]],
-      depth: BigInt
-  )(implicit m: Measure[T, M]): Boolean = {
-    require(
-      depth >= 0
-        && l1.forall(_.isWellFormed(depth))
-        && l2.forall(_.isWellFormed(depth))
-    )
-    forallConcat(l1, l2, _.isWellFormed(depth))
-    Helpers.toListL(l1 ++ l2, depth) ==
-      Helpers.toListL(l1, depth) ++ Helpers.toListL(l2, depth) because {
-        l1 match {
-          case Cons(h, t) =>
-            associativeToListL(t, l2, depth)
-            associativeConcat(
-              h.toListL(depth),
-              Helpers.toListL(t, depth),
-              Helpers.toListL(l2, depth)
-            )
-          case Nil() => Helpers.toListL(l1, depth) == Nil[T]()
-        }
-      }
-  }.holds
-
-  def associativeToListR[T, M](
-      l1: List[Node[T, M]],
-      l2: List[Node[T, M]],
-      depth: BigInt
-  )(implicit m: Measure[T, M]): Boolean = {
-    require(
-      depth >= 0
-        && l1.forall(_.isWellFormed(depth))
-        && l2.forall(_.isWellFormed(depth))
-    )
-    forallConcat(l1, l2, _.isWellFormed(depth))
-    Helpers.toListR(l1 ++ l2, depth) ==
-      Helpers.toListR(l2, depth) ++ Helpers.toListR(l1, depth) because {
-        l1 match {
-          case Cons(h, t) =>
-            associativeToListR(t, l2, depth)
-            associativeConcat(
-              Helpers.toListR(l2, depth),
-              Helpers.toListR(t, depth),
-              h.toListR(depth)
-            )
-          case Nil() => Helpers.toListR(l1, depth) == Nil[T]()
-        }
-      }
-  }.holds
-
+  /// Proves the associativity of List's concat operation on 3 elements
   def associativeConcat[T](
       l1: List[T],
       l2: List[T],
@@ -70,6 +26,7 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves the associativity of List's concat operation on 4 elements
   def associativeConcat[T](
       l1: List[T],
       l2: List[T],
@@ -88,6 +45,8 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves that if two lists verify a predicate for all elements then
+  /// their concatenation also does
   def forallConcat[T](
       l1: List[T],
       l2: List[T],
@@ -102,6 +61,8 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves that the last element of the concatenation of a List with a
+  /// non-empty List is the last element of the second List
   def lastConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l2.isEmpty)
     (l1 ++ l2).lastOption == l2.lastOption because {
@@ -112,16 +73,22 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves that the first element of the concatenation of a non-empty List
+  /// with a List is the first element of the first List
   def headConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l1.isEmpty)
     (l1 ++ l2).head == l1.head
   }.holds
 
+  /// Proves that the tail of the concatenation of a non-empty List with a List
+  /// is the concatenation of the tail of the first List with the second List
   def tailConcat[T](l1: List[T], l2: List[T]): Boolean = {
     require(!l1.isEmpty)
     (l1 ++ l2).tail == l1.tail ++ l2
   }.holds
 
+  /// Proves that appending to the concatenation of two Lists is equivalent to
+  /// appending to the second List and then concatenating both Lists
   def appendConcat[T](l1: List[T], l2: List[T], e: T): Boolean = {
     l1 ++ (l2 :+ e) == (l1 ++ l2) :+ e because {
       l1 match {
@@ -131,6 +98,8 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves that appending an element to a List and then reversing is
+  /// equivalent to preprending to the reverse of the List
   def reverseAppend[T](l1: List[T], e: T): Boolean = {
     (l1 :+ e).reverse == e :: l1.reverse because {
       l1 match {
@@ -140,17 +109,21 @@ object ListLemmas {
     }
   }.holds
 
-  def reverseSymetry[T](l1: List[T]): Boolean = {
+  /// Proves that reverse is a symmetrical operation
+  def reverseSymmetry[T](l1: List[T]): Boolean = {
     l1.reverse.reverse == l1 because {
       l1 match {
         case Cons(h, t) =>
-          reverseSymetry(t)
+          reverseSymmetry(t)
           reverseAppend(t.reverse, h)
         case Nil() => trivial
       }
     }
   }.holds
 
+  /// Proves that reversing the concatenation of two Lists is equivalent to
+  /// concatenating the reverse of the second List with the reverse of the
+  /// first
   def reverseConcat[T](l1: List[T], l2: List[T]): Boolean = {
     (l1 ++ l2).reverse == l2.reverse ++ l1.reverse because {
       l1 match {
@@ -162,6 +135,8 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves that the last element of a List to which we appended an element
+  /// is the appended element.
   def appendLast[T](l: List[T], e: T): Boolean = {
     (l :+ e).lastOption == Some[T](e) because {
       l match {
@@ -171,6 +146,8 @@ object ListLemmas {
     }
   }.holds
 
+  /// Proves that the last element of a reversed List is the first element of
+  /// the initial List
   def reverseHead[T](l: List[T]): Boolean = {
     l.reverse.lastOption == l.headOption because {
       l match {
@@ -184,14 +161,73 @@ object ListLemmas {
 }
 
 object FingerTreeLemmas {
+  /// Proves that the Helper.toListL operation distributes with the
+  /// List concatenation
+  def distributeToListLConcat[T, M](
+      l1: List[Node[T, M]],
+      l2: List[Node[T, M]],
+      depth: BigInt
+  )(implicit m: Measure[T, M]): Boolean = {
+    require(
+      depth >= 0
+        && l1.forall(_.isWellFormed(depth))
+        && l2.forall(_.isWellFormed(depth))
+    )
+    ListLemmas.forallConcat(l1, l2, _.isWellFormed(depth))
+    Helpers.toListL(l1 ++ l2, depth) ==
+      Helpers.toListL(l1, depth) ++ Helpers.toListL(l2, depth) because {
+        l1 match {
+          case Cons(h, t) =>
+            distributeToListLConcat(t, l2, depth)
+            ListLemmas.associativeConcat(
+              h.toListL(depth),
+              Helpers.toListL(t, depth),
+              Helpers.toListL(l2, depth)
+            )
+          case Nil() => Helpers.toListL(l1, depth) == Nil[T]()
+        }
+      }
+  }.holds
+
+  /// Proves that the Helper.toListR operation distributes with the
+  /// List concatenation
+  def distributeToListRConcat[T, M](
+      l1: List[Node[T, M]],
+      l2: List[Node[T, M]],
+      depth: BigInt
+  )(implicit m: Measure[T, M]): Boolean = {
+    require(
+      depth >= 0
+        && l1.forall(_.isWellFormed(depth))
+        && l2.forall(_.isWellFormed(depth))
+    )
+    ListLemmas.forallConcat(l1, l2, _.isWellFormed(depth))
+    Helpers.toListR(l1 ++ l2, depth) ==
+      Helpers.toListR(l2, depth) ++ Helpers.toListR(l1, depth) because {
+        l1 match {
+          case Cons(h, t) =>
+            distributeToListRConcat(t, l2, depth)
+            ListLemmas.associativeConcat(
+              Helpers.toListR(l2, depth),
+              Helpers.toListR(t, depth),
+              h.toListR(depth)
+            )
+          case Nil() => Helpers.toListR(l1, depth) == Nil[T]()
+        }
+      }
+  }.holds
+
+  /// Proves that Node.toListL is equivalent to the reverse of Node.toListR
   def nodesToListRReverse[T, M](node: Node[T, M], depth: BigInt)(implicit
       m: Measure[T, M]
   ): Boolean = {
     require(depth >= 0 && node.isWellFormed(depth))
     node.toListL(depth) == node.toListR(depth).reverse because
-      ListLemmas.reverseSymetry(node.toListL(depth))
+      ListLemmas.reverseSymmetry(node.toListL(depth))
   }.holds
 
+  /// Proves that Helpers.toListL is equivalent to the reverse
+  /// of Helpers.toListR
   def nodeListToListRReverse[T, M](
       elems: List[Node[T, M]],
       depth: BigInt
@@ -199,26 +235,31 @@ object FingerTreeLemmas {
     require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
     Helpers.toListL(elems, depth) ==
       Helpers.toListR(elems, depth).reverse because
-      ListLemmas.reverseSymetry(Helpers.toListL(elems, depth))
+      ListLemmas.reverseSymmetry(Helpers.toListL(elems, depth))
   }.holds
 
+  /// Proves that Digit.toListL is equivalent to the reverse of Digit.toListR
   def digitToListRReverse[T, M](digit: Digit[T, M], depth: BigInt)(implicit
       m: Measure[T, M]
   ): Boolean = {
     require(depth >= 0 && digit.isWellFormed(depth))
     digit.toListL(depth) == digit.toListR(depth).reverse because
-      ListLemmas.reverseSymetry(digit.toListL(depth))
+      ListLemmas.reverseSymmetry(digit.toListL(depth))
   }.holds
 
+  /// Proves that FingerTree.toListL is equivalent to the reverse of
+  /// FingerTree.toListR
   def treeToListRReverse[T, M](
       tree: FingerTree[T, M],
       depth: BigInt
   )(implicit m: Measure[T, M]): Boolean = {
     require(depth >= 0 && tree.isWellFormed(depth))
     tree.toListL(depth) == tree.toListR(depth).reverse because
-      ListLemmas.reverseSymetry(tree.toListL(depth))
+      ListLemmas.reverseSymmetry(tree.toListL(depth))
   }.holds
 
+  /// Proves that concatenating Digit.headL.toListL and Digit.tailL.toListL
+  /// is equivalent to Digit.toListL
   def headTailConcatL[T, M](digit: Digit[T, M], depth: BigInt)(implicit
       m: Measure[T, M]
   ): Boolean = {
@@ -249,6 +290,8 @@ object FingerTreeLemmas {
       }
   }.holds
 
+  /// Proves that concatenating Digit.headR.toListR and Digit.tailR.toListR
+  /// is equivalent to Digit.toListR
   def headTailConcatR[T, M](digit: Digit[T, M], depth: BigInt)(implicit
       m: Measure[T, M]
   ): Boolean = {
