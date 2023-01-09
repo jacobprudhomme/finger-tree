@@ -4,8 +4,8 @@ import stainless.lang._
 import stainless.collection._
 import stainless.proof._
 
-sealed trait Node[T]:
-  def toListL(depth: BigInt): List[T] = {
+sealed trait Node[T, M]:
+  def toListL(depth: BigInt)(implicit m: Measure[T, M]): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Leaf(a) => List(a)
@@ -37,7 +37,7 @@ sealed trait Node[T]:
       && res.reverse == this.toListR(depth)
   )
 
-  def toListR(depth: BigInt): List[T] = {
+  def toListR(depth: BigInt)(implicit m: Measure[T, M]): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Leaf(a) => List(a)
@@ -49,7 +49,7 @@ sealed trait Node[T]:
     }
   }.ensuring(!_.isEmpty)
 
-  def toDigit(depth: BigInt): Digit[T] = {
+  def toDigit(depth: BigInt)(implicit m: Measure[T, M]): Digit[T, M] = {
     require(depth >= 1 && this.isWellFormed(depth))
     this match {
       case Leaf(_)                    => ???
@@ -62,7 +62,7 @@ sealed trait Node[T]:
       && res.toListR(depth - 1) == this.toListR(depth)
   )
 
-  def isWellFormed(depth: BigInt): Boolean = {
+  def isWellFormed(depth: BigInt)(implicit m: Measure[T, M]): Boolean = {
     require(depth >= 0)
     this match
       case Leaf(a) => depth == 0
@@ -77,10 +77,11 @@ sealed trait Node[T]:
         && right.isWellFormed(depth - 1)
   }
 
-final case class Leaf[T](a: T) extends Node[T]
-final case class Node2[T](left: Node[T], right: Node[T]) extends Node[T]
-final case class Node3[T](
-    left: Node[T],
-    middle: Node[T],
-    right: Node[T]
-) extends Node[T]
+final case class Leaf[T, M](a: T) extends Node[T, M]
+final case class Node2[T, M](left: Node[T, M], right: Node[T, M])
+    extends Node[T, M]
+final case class Node3[T, M](
+    left: Node[T, M],
+    middle: Node[T, M],
+    right: Node[T, M]
+) extends Node[T, M]

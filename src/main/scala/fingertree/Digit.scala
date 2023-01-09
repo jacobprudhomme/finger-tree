@@ -4,8 +4,8 @@ import stainless.lang._
 import stainless.collection._
 import stainless.proof._
 
-private sealed trait Digit[T]:
-  def headL(depth: BigInt): Node[T] = {
+private sealed trait Digit[T, M]:
+  def headL(depth: BigInt)(implicit m: Measure[T, M]): Node[T, M] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(a)          => a
@@ -15,7 +15,7 @@ private sealed trait Digit[T]:
     }
   }.ensuring(res => res.isWellFormed(depth))
 
-  def headR(depth: BigInt): Node[T] = {
+  def headR(depth: BigInt)(implicit m: Measure[T, M]): Node[T, M] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(a)          => a
@@ -28,7 +28,7 @@ private sealed trait Digit[T]:
       && res == this.toNodeList(depth).last
   )
 
-  def tailL(depth: BigInt): Option[Digit[T]] = {
+  def tailL(depth: BigInt)(implicit m: Measure[T, M]): Option[Digit[T, M]] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(_)          => None()
@@ -38,7 +38,7 @@ private sealed trait Digit[T]:
     }
   }.ensuring(res => res.forall(_.isWellFormed(depth)))
 
-  def tailR(depth: BigInt): Option[Digit[T]] = {
+  def tailR(depth: BigInt)(implicit m: Measure[T, M]): Option[Digit[T, M]] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(_)          => None()
@@ -49,7 +49,7 @@ private sealed trait Digit[T]:
   }.ensuring(res => res.forall(_.isWellFormed(depth)))
 
   // this is awful but stainless loves it
-  def toNodeList(depth: BigInt): List[Node[T]] = {
+  def toNodeList(depth: BigInt)(implicit m: Measure[T, M]): List[Node[T, M]] = {
     require(depth >= 0 && this.isWellFormed(depth))
     decreases(this)
     this.tailL(depth) match {
@@ -62,16 +62,16 @@ private sealed trait Digit[T]:
     !res.isEmpty
       && res.forall(_.isWellFormed(depth))
       && res == (this match {
-        case Digit1(a)          => List[Node[T]](a)
-        case Digit2(a, b)       => List[Node[T]](a, b)
-        case Digit3(a, b, c)    => List[Node[T]](a, b, c)
-        case Digit4(a, b, c, d) => List[Node[T]](a, b, c, d)
+        case Digit1(a)          => List[Node[T, M]](a)
+        case Digit2(a, b)       => List[Node[T, M]](a, b)
+        case Digit3(a, b, c)    => List[Node[T, M]](a, b, c)
+        case Digit4(a, b, c, d) => List[Node[T, M]](a, b, c, d)
       })
       && Helpers.toListL(res, depth) == this.toListL(depth)
       && Helpers.toListR(res, depth) == this.toListR(depth)
   )
 
-  def toListL(depth: BigInt): List[T] = {
+  def toListL(depth: BigInt)(implicit m: Measure[T, M]): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(a) => a.toListL(depth)
@@ -114,7 +114,7 @@ private sealed trait Digit[T]:
       && res.reverse == this.toListR(depth)
   )
 
-  def toListR(depth: BigInt): List[T] = {
+  def toListR(depth: BigInt)(implicit m: Measure[T, M]): List[T] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(a)    => a.toListR(depth)
@@ -127,7 +127,7 @@ private sealed trait Digit[T]:
     }
   }.ensuring(!_.isEmpty)
 
-  def toTree(depth: BigInt): FingerTree[T] = {
+  def toTree(depth: BigInt)(implicit m: Measure[T, M]): FingerTree[T, M] = {
     require(depth >= 0 && this.isWellFormed(depth))
     this match {
       case Digit1(a)    => Single(a)
@@ -161,25 +161,29 @@ private sealed trait Digit[T]:
       && res.toListR(depth) == this.toListR(depth)
   )
 
-  def forall(p: Node[T] => Boolean): Boolean = {
+  def forall(p: Node[T, M] => Boolean)(implicit m: Measure[T, M]): Boolean = {
     this match
       case Digit1(a)          => p(a)
       case Digit2(a, b)       => p(a) && p(b)
       case Digit3(a, b, c)    => p(a) && p(b) && p(c)
       case Digit4(a, b, c, d) => p(a) && p(b) && p(c) && p(d)
   }
-  def isWellFormed(depth: BigInt): Boolean = {
+  def isWellFormed(depth: BigInt)(implicit m: Measure[T, M]): Boolean = {
     require(depth >= 0)
     this.forall(_.isWellFormed(depth))
   }
 
-private final case class Digit1[T](a: Node[T]) extends Digit[T]
-private final case class Digit2[T](a: Node[T], b: Node[T]) extends Digit[T]
-private final case class Digit3[T](a: Node[T], b: Node[T], c: Node[T])
-    extends Digit[T]
-private final case class Digit4[T](
-    a: Node[T],
-    b: Node[T],
-    c: Node[T],
-    d: Node[T]
-) extends Digit[T]
+private final case class Digit1[T, M](a: Node[T, M]) extends Digit[T, M]
+private final case class Digit2[T, M](a: Node[T, M], b: Node[T, M])
+    extends Digit[T, M]
+private final case class Digit3[T, M](
+    a: Node[T, M],
+    b: Node[T, M],
+    c: Node[T, M]
+) extends Digit[T, M]
+private final case class Digit4[T, M](
+    a: Node[T, M],
+    b: Node[T, M],
+    c: Node[T, M],
+    d: Node[T, M]
+) extends Digit[T, M]

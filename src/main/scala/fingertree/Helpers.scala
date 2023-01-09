@@ -6,7 +6,9 @@ import stainless.proof._
 
 // Helper functions
 object Helpers {
-  def toListL[T](elems: List[Node[T]], depth: BigInt): List[T] = {
+  def toListL[T, M](elems: List[Node[T, M]], depth: BigInt)(implicit
+      m: Measure[T, M]
+  ): List[T] = {
     require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
     elems match {
       case Cons(head, tail) =>
@@ -16,7 +18,9 @@ object Helpers {
     }
   }.ensuring(res => res.reverse == toListR(elems, depth))
 
-  def toListR[T](elems: List[Node[T]], depth: BigInt): List[T] = {
+  def toListR[T, M](elems: List[Node[T, M]], depth: BigInt)(implicit
+      m: Measure[T, M]
+  ): List[T] = {
     require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
     elems match {
       case Cons(head, tail) => toListR(tail, depth) ++ head.toListR(depth)
@@ -24,7 +28,9 @@ object Helpers {
     }
   }
 
-  def toNodes[T](elems: List[Node[T]], depth: BigInt): List[Node[T]] = {
+  def toNodes[T, M](elems: List[Node[T, M]], depth: BigInt)(implicit
+      m: Measure[T, M]
+  ): List[Node[T, M]] = {
     require(
       depth >= 0
         && elems.size >= 2
@@ -40,7 +46,7 @@ object Helpers {
           b.toListL(depth),
           c.toListL(depth)
         )
-        List[Node[T]](Node3(a, b, c))
+        List[Node[T, M]](Node3(a, b, c))
       case Cons(a, Cons(b, Cons(c, Cons(d, Nil())))) =>
         ListLemmas.associativeConcat(
           a.toListL(depth),
@@ -62,7 +68,7 @@ object Helpers {
           toListR(Cons(c, Cons(d, Nil())), depth) ==
             d.toListR(depth) ++ c.toListR(depth)
         )
-        List[Node[T]](Node2(a, b), Node2(c, d))
+        List[Node[T, M]](Node2(a, b), Node2(c, d))
       case Cons(a, Cons(b, Cons(c, tail))) => {
         ListLemmas.associativeConcat(
           a.toListL(depth),
@@ -85,12 +91,12 @@ object Helpers {
       && toListR(res, depth + 1) == toListR(elems, depth)
   )
 
-  def deepL[T](
-      prefixTail: Option[Digit[T]],
-      spine: FingerTree[T],
-      suffix: Digit[T],
+  def deepL[T, M](
+      prefixTail: Option[Digit[T, M]],
+      spine: FingerTree[T, M],
+      suffix: Digit[T, M],
       depth: BigInt
-  ): FingerTree[T] = {
+  )(implicit m: Measure[T, M]): FingerTree[T, M] = {
     require(
       depth >= 0
         && spine.isWellFormed(depth + 1)
@@ -140,12 +146,12 @@ object Helpers {
       }
   )
 
-  def deepR[T](
-      prefix: Digit[T],
-      spine: FingerTree[T],
-      suffixTail: Option[Digit[T]],
+  def deepR[T, M](
+      prefix: Digit[T, M],
+      spine: FingerTree[T, M],
+      suffixTail: Option[Digit[T, M]],
       depth: BigInt
-  ): FingerTree[T] = {
+  )(implicit m: Measure[T, M]): FingerTree[T, M] = {
     require(
       depth >= 0
         && spine.isWellFormed(depth + 1)
