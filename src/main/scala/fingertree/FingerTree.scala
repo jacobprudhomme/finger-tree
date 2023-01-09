@@ -6,8 +6,9 @@ import stainless.proof._
 
 /// This file defines the data structure for the finger tree, the actual object
 /// of interest in our project. Here, we define operations consisting of appending
-/// to and viewing from both ends of the tree, as well concatenating two tree
-/// together. The case classes of FingerTree[T] are found at the end of the file.
+/// to, removing from, and viewing from both ends of the tree, as well concatenating
+/// two tree together. The case classes of FingerTree[T] are found at the end of
+/// the file.
 
 sealed trait FingerTree[T]:
 
