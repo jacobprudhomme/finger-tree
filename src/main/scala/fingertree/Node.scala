@@ -100,7 +100,10 @@ sealed trait Node[T]:
       && res.toListR(depth - 1) == this.toListR(depth)
   )
 
-/// A Node[T] is either a Leaf[T](value), Node2[T](left, right) or Node3[T](left, middle, right)
+/// A Node[T] is either a:
+/// - Leaf[T](T)
+/// - Node2[T](Node[T], Node[T]), or
+/// - Node3[T](Node[T], Node[T], Node[T])
 final case class Leaf[T](a: T) extends Node[T]
 final case class Node2[T](left: Node[T], right: Node[T]) extends Node[T]
 final case class Node3[T](

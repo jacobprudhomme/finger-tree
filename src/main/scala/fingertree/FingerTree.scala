@@ -792,7 +792,10 @@ sealed trait FingerTree[T]:
       && res.toListR() == tree2.toListR() ++ tree1.toListR()
   )
 
-/// A FingerTree[T] is either an Empty[T](), Single[T](value) or Deep[T](prefix, spine, suffix)
+/// A FingerTree[T] is either a:
+/// - Empty[T](),
+/// - Single[T](Node[T]), or
+/// - Deep[T](Digit[T], FingerTree[T], Digit[T])
 final case class Empty[T]() extends FingerTree[T]
 final case class Single[T](value: Node[T]) extends FingerTree[T]
 final case class Deep[T](
