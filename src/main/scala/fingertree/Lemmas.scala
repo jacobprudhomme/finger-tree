@@ -140,11 +140,11 @@ object ListLemmas {
     }
   }.holds
 
-  def reverseSymetry[T](l1: List[T]): Boolean = {
+  def reverseSymmetry[T](l1: List[T]): Boolean = {
     l1.reverse.reverse == l1 because {
       l1 match {
         case Cons(h, t) =>
-          reverseSymetry(t)
+          reverseSymmetry(t)
           reverseAppend(t.reverse, h)
         case Nil() => trivial
       }
@@ -187,7 +187,7 @@ object FingerTreeLemmas {
   def nodesToListRReverse[T](node: Node[T], depth: BigInt): Boolean = {
     require(depth >= 0 && node.isWellFormed(depth))
     node.toListL(depth) == node.toListR(depth).reverse because
-      ListLemmas.reverseSymetry(node.toListL(depth))
+      ListLemmas.reverseSymmetry(node.toListL(depth))
   }.holds
 
   def nodeListToListRReverse[T](
@@ -197,19 +197,19 @@ object FingerTreeLemmas {
     require(depth >= 0 && elems.forall(_.isWellFormed(depth)))
     Helpers.toListL(elems, depth) ==
       Helpers.toListR(elems, depth).reverse because
-      ListLemmas.reverseSymetry(Helpers.toListL(elems, depth))
+      ListLemmas.reverseSymmetry(Helpers.toListL(elems, depth))
   }.holds
 
   def digitToListRReverse[T](digit: Digit[T], depth: BigInt): Boolean = {
     require(depth >= 0 && digit.isWellFormed(depth))
     digit.toListL(depth) == digit.toListR(depth).reverse because
-      ListLemmas.reverseSymetry(digit.toListL(depth))
+      ListLemmas.reverseSymmetry(digit.toListL(depth))
   }.holds
 
   def treeToListRReverse[T](tree: FingerTree[T], depth: BigInt): Boolean = {
     require(depth >= 0 && tree.isWellFormed(depth))
     tree.toListL(depth) == tree.toListR(depth).reverse because
-      ListLemmas.reverseSymetry(tree.toListL(depth))
+      ListLemmas.reverseSymmetry(tree.toListL(depth))
   }.holds
 
   def headTailConcatL[T](digit: Digit[T], depth: BigInt): Boolean = {
