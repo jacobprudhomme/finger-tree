@@ -586,8 +586,12 @@ sealed trait FingerTree[T]:
         val elemsTree1 = suffix1.toNodeList(depth)
         val elemsTree2 = prefix2.toNodeList(depth)
 
-        ListLemmas.associativeToListL(elemsTree1, elems, depth)
-        ListLemmas.associativeToListL(elemsTree1 ++ elems, elemsTree2, depth)
+        FingerTreeLemmas.associativeToListL(elemsTree1, elems, depth)
+        FingerTreeLemmas.associativeToListL(
+          elemsTree1 ++ elems,
+          elemsTree2,
+          depth
+        )
         ListLemmas.associativeConcat(
           prefix1.toListL(depth),
           spine1.toListL(depth + 1),
@@ -616,8 +620,12 @@ sealed trait FingerTree[T]:
           suffix2.toListL(depth)
         )
 
-        ListLemmas.associativeToListR(elemsTree1, elems, depth)
-        ListLemmas.associativeToListR(elemsTree1 ++ elems, elemsTree2, depth)
+        FingerTreeLemmas.associativeToListR(elemsTree1, elems, depth)
+        FingerTreeLemmas.associativeToListR(
+          elemsTree1 ++ elems,
+          elemsTree2,
+          depth
+        )
         ListLemmas.associativeConcat(
           Helpers.toListR(elemsTree2, depth),
           Helpers.toListR(elems, depth),

@@ -5,58 +5,6 @@ import stainless.collection._
 import stainless.proof._
 
 object ListLemmas {
-  def associativeToListL[T](
-      l1: List[Node[T]],
-      l2: List[Node[T]],
-      depth: BigInt
-  ): Boolean = {
-    require(
-      depth >= 0
-        && l1.forall(_.isWellFormed(depth))
-        && l2.forall(_.isWellFormed(depth))
-    )
-    forallConcat(l1, l2, _.isWellFormed(depth))
-    Helpers.toListL(l1 ++ l2, depth) ==
-      Helpers.toListL(l1, depth) ++ Helpers.toListL(l2, depth) because {
-        l1 match {
-          case Cons(h, t) =>
-            associativeToListL(t, l2, depth)
-            associativeConcat(
-              h.toListL(depth),
-              Helpers.toListL(t, depth),
-              Helpers.toListL(l2, depth)
-            )
-          case Nil() => Helpers.toListL(l1, depth) == Nil[T]()
-        }
-      }
-  }.holds
-
-  def associativeToListR[T](
-      l1: List[Node[T]],
-      l2: List[Node[T]],
-      depth: BigInt
-  ): Boolean = {
-    require(
-      depth >= 0
-        && l1.forall(_.isWellFormed(depth))
-        && l2.forall(_.isWellFormed(depth))
-    )
-    forallConcat(l1, l2, _.isWellFormed(depth))
-    Helpers.toListR(l1 ++ l2, depth) ==
-      Helpers.toListR(l2, depth) ++ Helpers.toListR(l1, depth) because {
-        l1 match {
-          case Cons(h, t) =>
-            associativeToListR(t, l2, depth)
-            associativeConcat(
-              Helpers.toListR(l2, depth),
-              Helpers.toListR(t, depth),
-              h.toListR(depth)
-            )
-          case Nil() => Helpers.toListR(l1, depth) == Nil[T]()
-        }
-      }
-  }.holds
-
   def associativeConcat[T](
       l1: List[T],
       l2: List[T],
@@ -184,6 +132,58 @@ object ListLemmas {
 }
 
 object FingerTreeLemmas {
+  def associativeToListL[T](
+      l1: List[Node[T]],
+      l2: List[Node[T]],
+      depth: BigInt
+  ): Boolean = {
+    require(
+      depth >= 0
+        && l1.forall(_.isWellFormed(depth))
+        && l2.forall(_.isWellFormed(depth))
+    )
+    ListLemmas.forallConcat(l1, l2, _.isWellFormed(depth))
+    Helpers.toListL(l1 ++ l2, depth) ==
+      Helpers.toListL(l1, depth) ++ Helpers.toListL(l2, depth) because {
+        l1 match {
+          case Cons(h, t) =>
+            associativeToListL(t, l2, depth)
+            ListLemmas.associativeConcat(
+              h.toListL(depth),
+              Helpers.toListL(t, depth),
+              Helpers.toListL(l2, depth)
+            )
+          case Nil() => Helpers.toListL(l1, depth) == Nil[T]()
+        }
+      }
+  }.holds
+
+  def associativeToListR[T](
+      l1: List[Node[T]],
+      l2: List[Node[T]],
+      depth: BigInt
+  ): Boolean = {
+    require(
+      depth >= 0
+        && l1.forall(_.isWellFormed(depth))
+        && l2.forall(_.isWellFormed(depth))
+    )
+    ListLemmas.forallConcat(l1, l2, _.isWellFormed(depth))
+    Helpers.toListR(l1 ++ l2, depth) ==
+      Helpers.toListR(l2, depth) ++ Helpers.toListR(l1, depth) because {
+        l1 match {
+          case Cons(h, t) =>
+            associativeToListR(t, l2, depth)
+            ListLemmas.associativeConcat(
+              Helpers.toListR(l2, depth),
+              Helpers.toListR(t, depth),
+              h.toListR(depth)
+            )
+          case Nil() => Helpers.toListR(l1, depth) == Nil[T]()
+        }
+      }
+  }.holds
+
   def nodesToListRReverse[T](node: Node[T], depth: BigInt): Boolean = {
     require(depth >= 0 && node.isWellFormed(depth))
     node.toListL(depth) == node.toListR(depth).reverse because
